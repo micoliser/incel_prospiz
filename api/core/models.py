@@ -150,6 +150,7 @@ class Booking(models.Model):
     
     currency = models.CharField(max_length=10, default='NGN')
     converted_total = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True, help_text="Total in chosen foreign currency (USD or GBP)")
+    exchange_rate = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, help_text="Fixed exchange rate used at the time of booking (e.g. 1600.00)")
     
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, default='card')
     payment_status = models.CharField(max_length=20, choices=PAYMENT_STATUS_CHOICES, default='pending')
@@ -196,6 +197,52 @@ class Booking(models.Model):
             return 0
         diff = (self.hold_expires_at - timezone.now()).total_seconds()
         return max(0, int(diff))
+
+    @property
+    def effective_exchange_rate(self):
+        if self.exchange_rate and self.exchange_rate > 0:
+            return float(self.exchange_rate)
+        if self.currency in ['USD', 'GBP'] and self.converted_total and self.converted_total > 0 and self.final_total_ngn > 0:
+            return round(float(self.final_total_ngn) / float(self.converted_total), 2)
+        if self.currency == 'USD':
+            return float(CampaignConfig.get_settings().usd_to_ngn_rate)
+        if self.currency == 'GBP':
+            return float(CampaignConfig.get_settings().gbp_to_ngn_rate)
+        return 1.0
+
+    @property
+    def converted_subtotal(self):
+        if self.currency in ['USD', 'GBP']:
+            rate = self.effective_exchange_rate
+            if rate > 0:
+                return round(self.subtotal_ngn / rate, 2)
+        return None
+
+    @property
+    def converted_group_discount(self):
+        if self.currency in ['USD', 'GBP'] and self.group_discount_ngn:
+            rate = self.effective_exchange_rate
+            if rate > 0:
+                return round(self.group_discount_ngn / rate, 2)
+        return None
+
+    @property
+    def converted_promo_discount(self):
+        if self.currency in ['USD', 'GBP'] and self.promo_discount_ngn:
+            rate = self.effective_exchange_rate
+            if rate > 0:
+                return round(self.promo_discount_ngn / rate, 2)
+        return None
+
+    @property
+    def converted_total_savings(self):
+        if self.currency in ['USD', 'GBP']:
+            savings_ngn = (self.group_discount_ngn or 0) + (self.promo_discount_ngn or 0)
+            if savings_ngn > 0:
+                rate = self.effective_exchange_rate
+                if rate > 0:
+                    return round(savings_ngn / rate, 2)
+        return None
 
     def cancel_and_reallocate(self):
         """

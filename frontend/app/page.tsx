@@ -14,6 +14,7 @@ import { HowItWorks } from '@/components/HowItWorks';
 import { Faq } from '@/components/Faq';
 import { Footer } from '@/components/Footer';
 import { BookingModal } from '@/components/BookingModal';
+import { EarlyBirdModal } from '@/components/EarlyBirdModal';
 
 export default function Home() {
   const [currency, setCurrency] = useState<Currency>('NGN');
@@ -58,30 +59,41 @@ export default function Home() {
     };
   }, [refreshAll]);
 
-  const handleOpenBooking = (packageId?: string) => {
+  const [initialPromoCode, setInitialPromoCode] = useState<string | undefined>(undefined);
+
+  const handleOpenBooking = (packageId?: string, promoCodeToApply?: string) => {
     setActivePackageId(packageId);
+    setInitialPromoCode(promoCodeToApply);
     setIsBookingOpen(true);
   };
 
   const handleCloseBooking = () => {
     setIsBookingOpen(false);
     setActivePackageId(undefined);
+    setInitialPromoCode(undefined);
   };
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Urgency Ticker Banner with live early bird seats and countdown */}
-      <UrgencyTicker stats={stats} />
-
-      {/* Navigation Header */}
-      <Navbar
-        currentCurrency={currency}
-        onCurrencyChange={setCurrency}
-        onOpenBooking={() => handleOpenBooking()}
+      {/* Catchy Dismissible Early-Bird Promo Modal (Shows on home page load) */}
+      <EarlyBirdModal
+        stats={stats}
+        onClaim={(code) => handleOpenBooking(undefined, code)}
       />
+
+      {/* Combined Sticky Header (Early Bird Bar + Navbar stick together on scroll) */}
+      <div style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+        <UrgencyTicker stats={stats} />
+        <Navbar
+          currentCurrency={currency}
+          onCurrencyChange={setCurrency}
+          onOpenBooking={() => handleOpenBooking()}
+        />
+      </div>
 
       {/* Main Content Area */}
       <main style={{ flexGrow: 1 }}>
+
         {/* Hero Section */}
         <Hero
           currentCurrency={currency}
@@ -126,6 +138,8 @@ export default function Home() {
         packages={packages}
         exchangeRates={stats?.exchangeRates}
         onBookingSuccess={refreshAll}
+        earlyBirdCode={stats?.earlyBird?.code}
+        initialPromoCode={initialPromoCode}
       />
     </div>
   );

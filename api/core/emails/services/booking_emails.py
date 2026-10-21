@@ -51,9 +51,38 @@ def build_booking_email_context(booking: Booking) -> Dict[str, Any]:
     elif method_raw == 'flutterwave':
         method_label = 'Flutterwave (Global Card / Multi-Currency)'
     elif method_raw == 'whatsapp':
-        method_label = 'Direct Wire / Representative Booking'
+        method_label = 'Book via WhatsApp'
     else:
         method_label = method_raw.title()
+
+    total_discount_ngn = (booking.group_discount_ngn or 0) + (booking.promo_discount_ngn or 0)
+    has_discount = total_discount_ngn > 0
+
+    is_foreign = booking.currency in ['USD', 'GBP']
+    currency_code = booking.currency if is_foreign else 'NGN'
+    currency_sym = '$' if booking.currency == 'USD' else '£' if booking.currency == 'GBP' else '₦'
+
+    if is_foreign:
+        rate = booking.effective_exchange_rate
+        subtotal_num = booking.converted_subtotal if booking.converted_subtotal is not None else (round(booking.subtotal_ngn / rate, 2) if rate > 0 else 0)
+        group_disc_num = booking.converted_group_discount if booking.converted_group_discount is not None else (round(booking.group_discount_ngn / rate, 2) if (booking.group_discount_ngn and rate > 0) else None)
+        promo_disc_num = booking.converted_promo_discount if booking.converted_promo_discount is not None else (round(booking.promo_discount_ngn / rate, 2) if (booking.promo_discount_ngn and rate > 0) else None)
+        total_disc_num = booking.converted_total_savings if booking.converted_total_savings is not None else (round(total_discount_ngn / rate, 2) if (total_discount_ngn and rate > 0) else None)
+        final_total_num = float(booking.converted_total) if booking.converted_total is not None else (round(booking.final_total_ngn / rate, 2) if rate > 0 else 0)
+
+        subtotal_str = f"{currency_sym}{subtotal_num:,.2f}"
+        group_disc_str = f"{currency_sym}{group_disc_num:,.2f}" if group_disc_num else None
+        promo_disc_str = f"{currency_sym}{promo_disc_num:,.2f}" if promo_disc_num else None
+        total_disc_str = f"{currency_sym}{total_disc_num:,.2f}" if total_disc_num else None
+        final_total_str = f"{currency_sym}{final_total_num:,.2f}"
+        exchange_rate_str = f"₦{rate:,.2f} / {booking.currency}" if rate > 0 else None
+    else:
+        subtotal_str = f"₦{booking.subtotal_ngn:,}"
+        group_disc_str = f"₦{booking.group_discount_ngn:,}" if booking.group_discount_ngn else None
+        promo_disc_str = f"₦{booking.promo_discount_ngn:,}" if booking.promo_discount_ngn else None
+        total_disc_str = f"₦{total_discount_ngn:,}" if total_discount_ngn else None
+        final_total_str = f"₦{booking.final_total_ngn:,}"
+        exchange_rate_str = None
 
     # Formatted date strings
     paid_at_str = booking.paid_at.strftime('%d %B %Y, %I:%M %p GMT+1') if booking.paid_at else 'Confirmed'
@@ -67,14 +96,21 @@ def build_booking_email_context(booking: Booking) -> Dict[str, Any]:
         'country': booking.country,
         'guest_count': booking.guest_count,
         'is_foreigner': booking.is_foreigner,
+        'is_foreign': is_foreign,
         'packages': packages,
-        'subtotal_formatted': f"{booking.subtotal_ngn:,}",
+        'currency_symbol': currency_sym,
+        'subtotal_formatted': subtotal_str,
         'group_discount_pct': booking.group_discount_pct,
-        'group_discount_formatted': f"{booking.group_discount_ngn:,}" if booking.group_discount_ngn else None,
+        'group_discount_formatted': group_disc_str,
         'promo_code': booking.promo_code,
         'promo_discount_pct': booking.promo_discount_pct,
-        'promo_discount_formatted': f"{booking.promo_discount_ngn:,}" if booking.promo_discount_ngn else None,
-        'final_total_formatted': f"{booking.final_total_ngn:,}",
+        'promo_discount_formatted': promo_disc_str,
+        'total_discount_formatted': total_disc_str,
+        'has_discount': has_discount,
+        'final_total_formatted': final_total_str,
+        'base_subtotal_ngn_formatted': f"₦{booking.subtotal_ngn:,}",
+        'base_final_total_ngn_formatted': f"₦{booking.final_total_ngn:,}",
+        'exchange_rate_formatted': exchange_rate_str,
         'currency': booking.currency,
         'converted_total_formatted': f"{booking.converted_total:,.2f}" if booking.converted_total else None,
         'payment_method_label': method_label,

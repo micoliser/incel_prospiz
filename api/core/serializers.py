@@ -178,11 +178,13 @@ class BookingCreateSerializer(serializers.ModelSerializer):
 
         currency = validated_data.get('currency', 'NGN')
         converted_total = None
+        exchange_rate = None
         if currency in ['USD', 'GBP']:
             cfg = CampaignConfig.get_settings()
             rate = float(cfg.usd_to_ngn_rate) if currency == 'USD' else float(cfg.gbp_to_ngn_rate)
             if rate > 0:
                 converted_total = round(final_total / rate, 2)
+                exchange_rate = rate
 
         booking = Booking.objects.create(
             full_name=validated_data['full_name'],
@@ -201,6 +203,7 @@ class BookingCreateSerializer(serializers.ModelSerializer):
             final_total_ngn=final_total,
             currency=currency,
             converted_total=converted_total,
+            exchange_rate=exchange_rate,
             payment_method=validated_data.get('payment_method', 'card'),
             special_requests=validated_data.get('special_requests', ''),
             payment_status='pending',
@@ -223,7 +226,12 @@ class BookingDetailSerializer(serializers.ModelSerializer):
     promoDiscountPct = serializers.IntegerField(source='promo_discount_pct')
     promoDiscountNGN = serializers.IntegerField(source='promo_discount_ngn')
     finalTotalNGN = serializers.IntegerField(source='final_total_ngn')
+    convertedSubtotal = serializers.FloatField(source='converted_subtotal', read_only=True)
+    convertedGroupDiscount = serializers.FloatField(source='converted_group_discount', read_only=True)
+    convertedPromoDiscount = serializers.FloatField(source='converted_promo_discount', read_only=True)
+    convertedTotalSavings = serializers.FloatField(source='converted_total_savings', read_only=True)
     convertedTotal = serializers.DecimalField(source='converted_total', max_digits=12, decimal_places=2, allow_null=True, required=False)
+    exchangeRate = serializers.FloatField(source='effective_exchange_rate', read_only=True)
     paymentMethod = serializers.CharField(source='payment_method')
     paymentStatus = serializers.CharField(source='payment_status')
     paymentReference = serializers.CharField(source='payment_reference', allow_null=True, required=False)
@@ -256,7 +264,12 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             'promoDiscountPct',
             'promoDiscountNGN',
             'finalTotalNGN',
+            'convertedSubtotal',
+            'convertedGroupDiscount',
+            'convertedPromoDiscount',
+            'convertedTotalSavings',
             'convertedTotal',
+            'exchangeRate',
             'currency',
             'paymentMethod',
             'paymentStatus',

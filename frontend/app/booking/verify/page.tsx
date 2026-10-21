@@ -376,7 +376,44 @@ function VerifyPaymentContent() {
   }
 
   const isPaid = booking.paymentStatus === 'paid';
-  const whatsappMsg = `Hello Incel Holidays & Prospiz Team! I have completed payment for Detty December Lagos Luxe.%0A%0A*Booking ID:* ${booking.bookingRef}%0A*Name:* ${booking.fullName}%0A*Guests:* ${booking.guestCount}%0A*Status:* ${booking.paymentStatus.toUpperCase()}`;
+  const subtotal = booking.subtotalNGN || booking.finalTotalNGN || 0;
+  const groupDiscount = booking.groupDiscountNGN || 0;
+  const promoDiscount = booking.promoDiscountNGN || 0;
+  const totalDiscount = groupDiscount + promoDiscount;
+  const hasDiscount = totalDiscount > 0;
+
+  const isUSD = booking.currency === 'USD';
+  const isGBP = booking.currency === 'GBP';
+  const isForeign = isUSD || isGBP;
+  const sym = isUSD ? '$' : isGBP ? '£' : '₦';
+
+  const rate = booking.exchangeRate || (booking.convertedTotal && booking.finalTotalNGN ? Number(booking.finalTotalNGN) / Number(booking.convertedTotal) : 1);
+
+  const formatCurrencyVal = (ngnVal: number, convertedVal?: number | null) => {
+    if (isForeign) {
+      const val = convertedVal != null ? convertedVal : (rate > 0 ? ngnVal / rate : 0);
+      return `${sym}${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `₦${Number(ngnVal).toLocaleString()}`;
+  };
+
+  const displaySubtotal = formatCurrencyVal(subtotal, booking.convertedSubtotal);
+  const displayGroupDiscount = formatCurrencyVal(groupDiscount, booking.convertedGroupDiscount);
+  const displayPromoDiscount = formatCurrencyVal(promoDiscount, booking.convertedPromoDiscount);
+  const displayTotalSavings = formatCurrencyVal(totalDiscount, booking.convertedTotalSavings);
+  const displayFinalTotal = isForeign && booking.convertedTotal != null
+    ? `${sym}${Number(booking.convertedTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `₦${Number(booking.finalTotalNGN || 0).toLocaleString()}`;
+
+  const discountNotes: string[] = [];
+  if (groupDiscount > 0) discountNotes.push(`Group Discount (5%): -${displayGroupDiscount}`);
+  if (promoDiscount > 0) discountNotes.push(`Promo ${booking.promoCode}: -${displayPromoDiscount}`);
+  const discountString = discountNotes.length > 0 ? `%0A*Discounts Applied:* ${discountNotes.join(', ')}` : '';
+  const priceInfo = hasDiscount
+    ? `%0A*Initial Price:* ${displaySubtotal}${discountString}%0A*Final Paid:* ${displayFinalTotal}`
+    : `%0A*Final Paid:* ${displayFinalTotal}`;
+
+  const whatsappMsg = `Hello Incel Holidays & Prospiz Team! I have completed payment for Detty December Lagos Luxe.%0A%0A*Booking ID:* ${booking.bookingRef}%0A*Name:* ${booking.fullName}%0A*Guests:* ${booking.guestCount}${priceInfo}%0A*Status:* ${booking.paymentStatus.toUpperCase()}`;
 
   return (
     <div style={{ minHeight: '85vh', padding: '48px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -507,13 +544,16 @@ function VerifyPaymentContent() {
             </div>
 
             <div>
-              <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>Total Paid</div>
-              <div style={{ fontWeight: 900, color: 'var(--blue-deep)', fontSize: '1.15rem' }}>
-                {booking.currency === 'USD' && booking.convertedTotal
-                  ? `$${Number(booking.convertedTotal).toLocaleString()}`
-                  : booking.currency === 'GBP' && booking.convertedTotal
-                    ? `£${Number(booking.convertedTotal).toLocaleString()}`
-                    : `₦${Number(booking.finalTotalNGN).toLocaleString()}`}
+              <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)' }}>Final Paid Price</div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: '6px', flexWrap: 'wrap' }}>
+                {hasDiscount && (
+                  <span style={{ fontSize: '0.88rem', color: '#94a3b8', textDecoration: 'line-through', textDecorationColor: '#ef4444', fontWeight: 700 }}>
+                    {displaySubtotal}
+                  </span>
+                )}
+                <span style={{ fontWeight: 900, color: hasDiscount ? '#059669' : 'var(--blue-deep)', fontSize: '1.15rem' }}>
+                  {displayFinalTotal}
+                </span>
               </div>
               <div style={{ fontSize: '0.76rem', color: '#059669', fontWeight: 700 }}>
                 Status: {booking.paymentStatus.toUpperCase()}
@@ -525,7 +565,76 @@ function VerifyPaymentContent() {
               <div style={{ fontWeight: 700, color: 'var(--text-heading)', fontSize: '0.92rem', textTransform: 'capitalize' }}>
                 {booking.paymentMethod}
               </div>
-              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Online Card Payment</div>
+              <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>Confirmed Transaction</div>
+            </div>
+          </div>
+
+          {/* Full Itemized Price Description */}
+          <div style={{
+            backgroundColor: hasDiscount ? '#f0fdf4' : '#ffffff',
+            border: hasDiscount ? '1px solid #86efac' : '1px solid var(--border-light)',
+            borderRadius: 'var(--radius-md)',
+            padding: '12px 16px',
+            marginBottom: '14px',
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <span style={{ fontSize: '0.76rem', fontWeight: 800, color: hasDiscount ? '#065f46' : 'var(--blue-deep)', textTransform: 'uppercase' }}>
+                Price Description
+              </span>
+              {hasDiscount && (
+                <span style={{ fontSize: '0.72rem', fontWeight: 800, color: '#065f46', backgroundColor: '#d1fae5', padding: '1px 6px', borderRadius: '4px' }}>
+                  Total Savings: {displayTotalSavings}
+                </span>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: '4px' }}>
+              <span style={{ color: 'var(--text-secondary)' }}>Normal Initial Price:</span>
+              <span style={{
+                fontWeight: 700,
+                color: hasDiscount ? '#94a3b8' : 'var(--text-heading)',
+                textDecoration: hasDiscount ? 'line-through' : 'none',
+                textDecorationColor: hasDiscount ? '#ef4444' : undefined,
+              }}>
+                {displaySubtotal}
+              </span>
+            </div>
+
+            {groupDiscount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: '4px', color: '#059669' }}>
+                <span>Group Discount ({booking.groupDiscountPct || 5}% for 4+ Guests):</span>
+                <span style={{ fontWeight: 700 }}>-{displayGroupDiscount}</span>
+              </div>
+            )}
+
+            {promoDiscount > 0 && (
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.84rem', marginBottom: '4px', color: '#059669' }}>
+                <span>Promo Discount ({booking.promoCode}{booking.promoDiscountPct ? ` · ${booking.promoDiscountPct}% off` : ''}):</span>
+                <span style={{ fontWeight: 700 }}>-{displayPromoDiscount}</span>
+              </div>
+            )}
+
+            <div style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'baseline',
+              borderTop: '1px dashed ' + (hasDiscount ? '#86efac' : 'var(--border-light)'),
+              paddingTop: '6px',
+              marginTop: '4px',
+            }}>
+              <span style={{ fontWeight: 800, fontSize: '0.88rem', color: 'var(--text-heading)' }}>
+                Final Paid Price:
+              </span>
+              <div style={{ textAlign: 'right' }}>
+                {hasDiscount && (
+                  <span style={{ fontSize: '0.82rem', color: '#94a3b8', textDecoration: 'line-through', textDecorationColor: '#ef4444', marginRight: '6px' }}>
+                    {displaySubtotal}
+                  </span>
+                )}
+                <span style={{ fontWeight: 900, color: hasDiscount ? '#059669' : 'var(--blue-deep)', fontSize: '1.05rem' }}>
+                  {displayFinalTotal}
+                </span>
+              </div>
             </div>
           </div>
 

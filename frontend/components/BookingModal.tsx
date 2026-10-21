@@ -15,6 +15,7 @@ import {
   Copy,
   Check,
   Info,
+  Tag,
 } from 'lucide-react';
 
 interface BookingModalProps {
@@ -25,6 +26,8 @@ interface BookingModalProps {
   packages?: ExcursionPackage[];
   exchangeRates?: ExchangeRates;
   onBookingSuccess?: () => void;
+  earlyBirdCode?: string;
+  initialPromoCode?: string;
 }
 
 export const BookingModal: React.FC<BookingModalProps> = ({
@@ -35,6 +38,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   packages = PACKAGES_DATA,
   exchangeRates,
   onBookingSuccess,
+  earlyBirdCode,
+  initialPromoCode,
 }) => {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [guestCount, setGuestCount] = useState<number>(1);
@@ -245,8 +250,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       } else {
         setSelectedIds([vipId]);
       }
+      if (initialPromoCode) {
+        const cleanCode = initialPromoCode.trim().toUpperCase();
+        setPromoCode(cleanCode);
+        validatePromo(cleanCode).then((res) => {
+          if (res.valid && res.discountPct) {
+            setAppliedPromo({ code: res.code || cleanCode, discountPct: res.discountPct });
+          }
+        }).catch(() => {});
+      }
     }
-  }, [isOpen, selectedPackageId, packages, vipId, currentCurrency]);
+  }, [isOpen, selectedPackageId, packages, vipId, currentCurrency, initialPromoCode]);
 
   const handleClose = () => {
     isInitializedRef.current = false;
@@ -334,6 +348,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   }
 
   const finalTotalNGN = Math.max(0, subtotalNGN - groupDiscountNGN - promoDiscountNGN);
+  const totalDiscountNGN = groupDiscountNGN + promoDiscountNGN;
+  const hasDiscount = totalDiscountNGN > 0;
 
   const handleApplyPromo = async () => {
     setPromoError('');
@@ -344,7 +360,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       if (res.valid && res.discountPct) {
         setAppliedPromo({ code: res.code || promoCode.trim().toUpperCase(), discountPct: res.discountPct });
       } else {
-        setPromoError(res.error || 'Invalid promo code. Try "EARLYBIRD5" for 5% off!');
+        setPromoError(res.error || `Invalid promo code. Try "${earlyBirdCode || 'EARLYBIRD17'}" for 5% off!`);
       }
     } finally {
       setIsCheckingPromo(false);
@@ -453,8 +469,20 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           .filter(Boolean)
           .join(', ');
         const formattedTotal = formatPrice(res.finalTotalNGN || finalTotalNGN, currentCurrency, false, undefined, exchangeRates);
-        const methodLabel = 'WhatsApp Booking / Direct Wire';
-        const message = `Hello Incel Holidays & Prospiz Team! I would like to book Detty December Lagos Luxe.%0A%0A*Booking ID:* ${ref}%0A*Name:* ${fullName}%0A*Email:* ${email}%0A*Phone:* ${phone}%0A*Country:* ${country}%0A*Guests:* ${guestCount}%0A*Selected Packages:* ${packagesList}%0A*Total Amount:* ${formattedTotal}%0A*Payment Method:* ${methodLabel}%0A*Special Requests:* ${specialRequests || 'None'}`;
+        const formattedSubtotal = formatPrice(subtotalNGN, currentCurrency, false, undefined, exchangeRates);
+        const methodLabel = 'Book via WhatsApp';
+        const appliedDiscounts: string[] = [];
+        if (groupDiscountNGN > 0) {
+          appliedDiscounts.push(`Group Discount (5%): -${formatPrice(groupDiscountNGN, currentCurrency, false, undefined, exchangeRates)}`);
+        }
+        if (promoDiscountNGN > 0 && appliedPromo) {
+          appliedDiscounts.push(`Promo ${appliedPromo.code} (${appliedPromo.discountPct}% off): -${formatPrice(promoDiscountNGN, currentCurrency, false, undefined, exchangeRates)}`);
+        }
+        const discountsText = appliedDiscounts.length > 0 ? `%0A*Discounts Applied:* ${appliedDiscounts.join(', ')}` : '';
+        const priceSection = hasDiscount
+          ? `%0A*Initial Price:* ${formattedSubtotal}${discountsText}%0A*Final Total:* ${formattedTotal}%0A*Total Savings:* ${formatPrice(totalDiscountNGN, currentCurrency, false, undefined, exchangeRates)}`
+          : `%0A*Total Amount:* ${formattedTotal}`;
+        const message = `Hello Incel Holidays & Prospiz Team! I would like to book Detty December Lagos Luxe.%0A%0A*Booking ID:* ${ref}%0A*Name:* ${fullName}%0A*Email:* ${email}%0A*Phone:* ${phone}%0A*Country:* ${country}%0A*Guests:* ${guestCount}%0A*Selected Packages:* ${packagesList}${priceSection}%0A*Payment Method:* ${methodLabel}%0A*Special Requests:* ${specialRequests || 'None'}`;
         window.open(`https://wa.me/2348123456789?text=${message}`, '_blank');
       }
 
@@ -898,7 +926,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       setPromoCode(e.target.value);
                       if (promoError) setPromoError('');
                     }}
-                    placeholder="Promo Code (e.g. EARLYBIRD5)"
+                    placeholder={`Promo Code (e.g. ${earlyBirdCode || 'EARLYBIRD17'})`}
                     style={{
                       flexGrow: 1,
                       background: 'transparent',
@@ -979,10 +1007,135 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     gap: '6px',
                   }}>
                     <CheckCircle2 size={16} />
-                    <span>Promo code &ldquo;{appliedPromo.code}&rdquo; applied: {appliedPromo.discountPct}% discount!</span>
+                    <span>Promo code &ldquo;{appliedPromo.code}&rdquo; applied: {appliedPromo.discountPct}% discount (-{formatPrice(promoDiscountNGN, currentCurrency, false, undefined, exchangeRates)})!</span>
                   </div>
                 )}
               </div>
+
+              {/* Price Breakdown with Original Price & Applied Discounts */}
+              {selectedIds.length > 0 && (
+                <div style={{
+                  backgroundColor: hasDiscount ? '#f0fdf4' : 'var(--bg-subtle)',
+                  border: hasDiscount ? '1.5px solid #86efac' : '1px solid var(--border-light)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '16px 18px',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                  transition: 'all 0.3s ease',
+                }}>
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderBottom: '1px solid ' + (hasDiscount ? '#bbf7d0' : 'var(--border-light)'),
+                    paddingBottom: '8px',
+                  }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <Tag size={15} style={{ color: hasDiscount ? '#059669' : 'var(--blue-deep)' }} />
+                      <span style={{
+                        fontSize: '0.82rem',
+                        fontWeight: 800,
+                        color: hasDiscount ? '#065f46' : 'var(--blue-deep)',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.04em',
+                      }}>
+                        Price Summary
+                      </span>
+                    </div>
+                    <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                      {guestCount} {guestCount === 1 ? 'Guest' : 'Guests'} · {selectedIds.length} {selectedIds.length === 1 ? 'Tour' : 'Tours'}
+                    </span>
+                  </div>
+
+                  {/* Normal Initial Price */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.86rem' }}>
+                    <span style={{ color: 'var(--text-secondary)' }}>Normal Initial Price:</span>
+                    <span style={{
+                      fontWeight: 700,
+                      color: hasDiscount ? '#94a3b8' : 'var(--text-heading)',
+                      textDecoration: hasDiscount ? 'line-through' : 'none',
+                      textDecorationColor: hasDiscount ? '#ef4444' : undefined,
+                      textDecorationThickness: hasDiscount ? '1.5px' : undefined,
+                    }}>
+                      {formatPrice(subtotalNGN, currentCurrency, false, undefined, exchangeRates)}
+                    </span>
+                  </div>
+
+                  {/* Point out applied discounts */}
+                  {groupDiscountNGN > 0 && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.86rem', color: '#059669' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ backgroundColor: '#d1fae5', color: '#065f46', fontSize: '0.68rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px' }}>
+                          5% OFF
+                        </span>
+                        <span>Group Discount (4+ guests):</span>
+                      </span>
+                      <span style={{ fontWeight: 800 }}>
+                        -{formatPrice(groupDiscountNGN, currentCurrency, false, undefined, exchangeRates)}
+                      </span>
+                    </div>
+                  )}
+
+                  {promoDiscountNGN > 0 && appliedPromo && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.86rem', color: '#059669' }}>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ backgroundColor: '#d1fae5', color: '#065f46', fontSize: '0.68rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px' }}>
+                          {appliedPromo.discountPct}% OFF
+                        </span>
+                        <span>Promo Code &ldquo;{appliedPromo.code}&rdquo;:</span>
+                      </span>
+                      <span style={{ fontWeight: 800 }}>
+                        -{formatPrice(promoDiscountNGN, currentCurrency, false, undefined, exchangeRates)}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Final Payable with Cancelled Normal Price */}
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    borderTop: '1.5px dashed ' + (hasDiscount ? '#86efac' : 'var(--border-light)'),
+                    paddingTop: '10px',
+                    marginTop: '2px',
+                  }}>
+                    <div>
+                      <div style={{ fontWeight: 800, fontSize: '0.92rem', color: 'var(--text-heading)' }}>
+                        {hasDiscount ? 'New Discounted Price:' : 'Total Amount:'}
+                      </div>
+                      {hasDiscount && (
+                        <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px', marginTop: '2px' }}>
+                          <CheckCircle2 size={13} />
+                          <span>Total Savings: {formatPrice(totalDiscountNGN, currentCurrency, false, undefined, exchangeRates)}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      {hasDiscount && (
+                        <div style={{
+                          fontSize: '0.88rem',
+                          color: '#94a3b8',
+                          textDecoration: 'line-through',
+                          textDecorationColor: '#ef4444',
+                          fontWeight: 700,
+                          lineHeight: 1.2,
+                        }}>
+                          {formatPrice(subtotalNGN, currentCurrency, false, undefined, exchangeRates)}
+                        </div>
+                      )}
+                      <div style={{
+                        fontSize: '1.35rem',
+                        fontWeight: 900,
+                        color: hasDiscount ? '#059669' : 'var(--blue-deep)',
+                        lineHeight: 1.1,
+                      }}>
+                        {formatPrice(finalTotalNGN, currentCurrency, false, undefined, exchangeRates)}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Step 3: Payment Method Selection */}
               <div>
@@ -1092,13 +1245,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         </span>
                       </div>
                       <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-heading)' }}>
-                        {currentCurrency === 'NGN' ? 'Direct Wire / WhatsApp' : 'International Wire / WhatsApp'}
+                        Book via WhatsApp
                       </div>
                     </div>
                     <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
-                      {currentCurrency === 'NGN'
-                        ? 'Corporate bank wire & booking team assistance'
-                        : 'Direct foreign currency wire & booking team'}
+                      Corporate bank wire & booking team assistance
                     </div>
                   </div>
                 </div>
@@ -1194,16 +1345,68 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               boxShadow: '0 -4px 16px rgba(0,0,0,0.06)',
               zIndex: 10,
             }}>
-              <div>
-                <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                  Total for {guestCount} {guestCount === 1 ? 'Guest' : 'Guests'}:
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                  <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
+                    Total for {guestCount} {guestCount === 1 ? 'Guest' : 'Guests'}:
+                  </span>
+                  {hasDiscount && (
+                    <span style={{
+                      fontSize: '0.68rem',
+                      fontWeight: 800,
+                      color: '#065f46',
+                      backgroundColor: '#d1fae5',
+                      border: '1px solid #a7f3d0',
+                      padding: '1px 6px',
+                      borderRadius: '4px',
+                    }}>
+                      Save {formatPrice(totalDiscountNGN, currentCurrency, false, undefined, exchangeRates)}
+                    </span>
+                  )}
                 </div>
-                <div style={{ fontSize: '1.65rem', fontWeight: 900, color: 'var(--blue-deep)', lineHeight: 1.1 }}>
-                  {formatPrice(finalTotalNGN, currentCurrency, false, undefined, exchangeRates)}
+
+                {/* Normal initial price in cancelled space and new discount price */}
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+                  {hasDiscount && (
+                    <span
+                      style={{
+                        fontSize: '1.12rem',
+                        fontWeight: 700,
+                        color: '#94a3b8',
+                        textDecoration: 'line-through',
+                        textDecorationColor: '#ef4444',
+                        textDecorationThickness: '2px',
+                      }}
+                      title="Initial price before discount"
+                    >
+                      {formatPrice(subtotalNGN, currentCurrency, false, undefined, exchangeRates)}
+                    </span>
+                  )}
+                  <span style={{
+                    fontSize: '1.65rem',
+                    fontWeight: 900,
+                    color: hasDiscount ? '#059669' : 'var(--blue-deep)',
+                    lineHeight: 1.1,
+                  }}>
+                    {formatPrice(finalTotalNGN, currentCurrency, false, undefined, exchangeRates)}
+                  </span>
                 </div>
-                {groupDiscountNGN > 0 && (
-                  <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 700 }}>
-                    Includes 5% group discount (-{formatPrice(groupDiscountNGN, currentCurrency, false, undefined, exchangeRates)})
+
+                {/* Point out the discounts being applied */}
+                {hasDiscount && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '2px', marginTop: '2px' }}>
+                    {groupDiscountNGN > 0 && (
+                      <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <CheckCircle2 size={12} style={{ color: '#059669', flexShrink: 0 }} />
+                        <span>5% Group Discount (4+ guests): -{formatPrice(groupDiscountNGN, currentCurrency, false, undefined, exchangeRates)}</span>
+                      </div>
+                    )}
+                    {promoDiscountNGN > 0 && appliedPromo && (
+                      <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <CheckCircle2 size={12} style={{ color: '#059669', flexShrink: 0 }} />
+                        <span>Promo Code &ldquo;{appliedPromo.code}&rdquo; ({appliedPromo.discountPct}% off): -{formatPrice(promoDiscountNGN, currentCurrency, false, undefined, exchangeRates)}</span>
+                      </div>
+                    )}
                   </div>
                 )}
                 {(paymentMethod === 'paystack' || paymentMethod === 'flutterwave') && (
@@ -1240,12 +1443,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       ? 'Redirecting to Paystack...'
                       : paymentMethod === 'flutterwave'
                         ? 'Redirecting to Flutterwave...'
-                        : 'Holding Seat...'
+                        : 'Connecting to WhatsApp...'
                     : paymentMethod === 'paystack'
                       ? 'Pay with Paystack'
                       : paymentMethod === 'flutterwave'
                         ? 'Pay with Flutterwave'
-                        : 'Confirm Reservation'}
+                        : 'Book via WhatsApp'}
                 </span>
                 <ArrowRight size={18} />
               </button>
@@ -1345,6 +1548,30 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <span style={{ color: 'var(--text-secondary)' }}>Selected Tours:</span>
                 <span style={{ fontWeight: 700, color: 'var(--text-heading)' }}>{selectedIds.length} Packages</span>
               </div>
+              {hasDiscount && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.9rem' }}>
+                  <span style={{ color: 'var(--text-secondary)' }}>Normal Initial Price:</span>
+                  <span style={{ fontWeight: 700, color: '#94a3b8', textDecoration: 'line-through', textDecorationColor: '#ef4444' }}>
+                    {formatPrice(subtotalNGN, currentCurrency, false, undefined, exchangeRates)}
+                  </span>
+                </div>
+              )}
+              {groupDiscountNGN > 0 && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.88rem', color: '#059669' }}>
+                  <span>Group Discount (5%):</span>
+                  <span style={{ fontWeight: 700 }}>
+                    -{formatPrice(groupDiscountNGN, currentCurrency, false, undefined, exchangeRates)}
+                  </span>
+                </div>
+              )}
+              {promoDiscountNGN > 0 && appliedPromo && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.88rem', color: '#059669' }}>
+                  <span>Promo Discount ({appliedPromo.code}):</span>
+                  <span style={{ fontWeight: 700 }}>
+                    -{formatPrice(promoDiscountNGN, currentCurrency, false, undefined, exchangeRates)}
+                  </span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.9rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Payment Option:</span>
                 <span style={{ fontWeight: 700, color: 'var(--text-heading)' }}>
@@ -1352,15 +1579,28 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     ? 'Paystack'
                     : paymentMethod === 'flutterwave'
                       ? 'Flutterwave'
-                      : 'WhatsApp / Direct Wire'}
+                      : 'Book via WhatsApp'}
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.9rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.9rem', alignItems: 'center' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Total Amount:</span>
-                <span style={{ fontWeight: 900, color: 'var(--blue-deep)' }}>
-                  {formatPrice(finalTotalNGN, currentCurrency, false, undefined, exchangeRates)}
-                </span>
+                <div style={{ textAlign: 'right' }}>
+                  {hasDiscount && (
+                    <span style={{ fontSize: '0.86rem', color: '#94a3b8', textDecoration: 'line-through', textDecorationColor: '#ef4444', marginRight: '8px', fontWeight: 600 }}>
+                      {formatPrice(subtotalNGN, currentCurrency, false, undefined, exchangeRates)}
+                    </span>
+                  )}
+                  <span style={{ fontWeight: 900, color: hasDiscount ? '#059669' : 'var(--blue-deep)', fontSize: '1.05rem' }}>
+                    {formatPrice(finalTotalNGN, currentCurrency, false, undefined, exchangeRates)}
+                  </span>
+                </div>
               </div>
+              {hasDiscount && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.84rem', color: '#059669', fontWeight: 700 }}>
+                  <span>Total Saved:</span>
+                  <span>{formatPrice(totalDiscountNGN, currentCurrency, false, undefined, exchangeRates)}</span>
+                </div>
+              )}
               <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.86rem' }}>
                 <span style={{ color: 'var(--text-secondary)' }}>Status:</span>
                 <span style={{ color: '#059669', fontWeight: 800 }}>Seat Reserved (Awaiting Payment)</span>
@@ -1369,7 +1609,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
               <a
-                href={`https://wa.me/2348123456789?text=Hello%20Team!%20My%20Booking%20ID%20is%20${bookingId}.%20I%20have%20reserved%20${guestCount}%20seats%20for%20Detty%20December%20Lagos%20Luxe.`}
+                href={`https://wa.me/2348123456789?text=${encodeURIComponent(
+                  `Hello Team! My Booking ID is ${bookingId}. I have reserved ${guestCount} seats for Detty December Lagos Luxe.${
+                    hasDiscount
+                      ? `\nInitial Price: ${formatPrice(subtotalNGN, currentCurrency, false, undefined, exchangeRates)}\nTotal Saved: ${formatPrice(totalDiscountNGN, currentCurrency, false, undefined, exchangeRates)}\nFinal Total: ${formatPrice(finalTotalNGN, currentCurrency, false, undefined, exchangeRates)}`
+                      : `\nTotal: ${formatPrice(finalTotalNGN, currentCurrency, false, undefined, exchangeRates)}`
+                  }`
+                )}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="btn-whatsapp"

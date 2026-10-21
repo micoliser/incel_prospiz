@@ -197,8 +197,47 @@ function BookingLookupContent() {
   const isPaid = booking?.paymentStatus === 'paid';
   const isPending = booking?.paymentStatus === 'pending';
 
+  const subtotal = booking ? (booking.subtotalNGN || booking.finalTotalNGN || 0) : 0;
+  const groupDiscount = booking?.groupDiscountNGN || 0;
+  const promoDiscount = booking?.promoDiscountNGN || 0;
+  const totalDiscount = groupDiscount + promoDiscount;
+  const hasDiscount = totalDiscount > 0;
+
+  const isUSD = booking?.currency === 'USD';
+  const isGBP = booking?.currency === 'GBP';
+  const isForeign = isUSD || isGBP;
+  const sym = isUSD ? '$' : isGBP ? '£' : '₦';
+
+  const rate = booking?.exchangeRate || (booking?.convertedTotal && booking?.finalTotalNGN ? Number(booking.finalTotalNGN) / Number(booking.convertedTotal) : 1);
+
+  const formatCurrencyVal = (ngnVal: number, convertedVal?: number | null) => {
+    if (isForeign) {
+      const val = convertedVal != null ? convertedVal : (rate > 0 ? ngnVal / rate : 0);
+      return `${sym}${Number(val).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+    return `₦${Number(ngnVal).toLocaleString()}`;
+  };
+
+  const displaySubtotal = formatCurrencyVal(subtotal, booking?.convertedSubtotal);
+  const displayGroupDiscount = formatCurrencyVal(groupDiscount, booking?.convertedGroupDiscount);
+  const displayPromoDiscount = formatCurrencyVal(promoDiscount, booking?.convertedPromoDiscount);
+  const displayTotalSavings = formatCurrencyVal(totalDiscount, booking?.convertedTotalSavings);
+  const displayFinalTotal = isForeign && booking?.convertedTotal != null
+    ? `${sym}${Number(booking.convertedTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    : `₦${Number(booking?.finalTotalNGN || 0).toLocaleString()}`;
+
+  const discountNotes: string[] = [];
+  if (groupDiscount > 0) discountNotes.push(`Group Discount (5%): -${displayGroupDiscount}`);
+  if (promoDiscount > 0) discountNotes.push(`Promo ${booking?.promoCode}: -${displayPromoDiscount}`);
+  const discountString = discountNotes.length > 0 ? `%0A*Discounts Applied:* ${discountNotes.join(', ')}` : '';
+  const priceInfo = hasDiscount && booking
+    ? `%0A*Initial Price:* ${displaySubtotal}${discountString}%0A*Final ${isPaid ? 'Paid' : 'Payable'}:* ${displayFinalTotal}`
+    : booking
+      ? `%0A*Amount ${isPaid ? 'Paid' : 'Due'}:* ${displayFinalTotal}`
+      : '';
+
   const whatsappMsg = booking
-    ? `Hello Incel Holidays & Prospiz Team! I am inquiring about my booking:%0A%0A*Reference:* ${booking.bookingRef}%0A*Lead Guest:* ${booking.fullName}%0A*Status:* ${booking.paymentStatus.toUpperCase()}%0A*Guests:* ${booking.guestCount}`
+    ? `Hello Incel Holidays & Prospiz Team! I am inquiring about my booking:%0A%0A*Reference:* ${booking.bookingRef}%0A*Lead Guest:* ${booking.fullName}%0A*Status:* ${booking.paymentStatus.toUpperCase()}%0A*Guests:* ${booking.guestCount}${priceInfo}`
     : `Hello Incel Holidays & Prospiz Team! I need assistance looking up my reservation for Detty December Lagos Luxe.`;
 
   return (
@@ -737,27 +776,49 @@ function BookingLookupContent() {
                   }}
                 >
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem' }}>
-                    <span style={{ color: 'var(--text-secondary)' }}>Subtotal:</span>
-                    <span style={{ fontWeight: 700, color: 'var(--text-heading)' }}>
-                      ₦{Number(booking.subtotalNGN).toLocaleString()}
+                    <span style={{ color: 'var(--text-secondary)' }}>Normal Initial Price:</span>
+                    <span style={{
+                      fontWeight: 700,
+                      color: hasDiscount ? '#94a3b8' : 'var(--text-heading)',
+                      textDecoration: hasDiscount ? 'line-through' : 'none',
+                      textDecorationColor: hasDiscount ? '#ef4444' : undefined,
+                    }}>
+                      {displaySubtotal}
                     </span>
                   </div>
 
                   {booking.groupDiscountNGN > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem', color: '#059669' }}>
-                      <span>Group Discount ({booking.groupDiscountPct || 5}% for 4+ Guests):</span>
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ backgroundColor: '#d1fae5', color: '#065f46', fontSize: '0.68rem', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>
+                          5% OFF
+                        </span>
+                        <span>Group Discount ({booking.groupDiscountPct || 5}% for 4+ Guests):</span>
+                      </span>
                       <span style={{ fontWeight: 700 }}>
-                        -₦{Number(booking.groupDiscountNGN).toLocaleString()}
+                        -{displayGroupDiscount}
                       </span>
                     </div>
                   )}
 
                   {booking.promoDiscountNGN > 0 && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.9rem', color: '#059669' }}>
-                      <span>Promo Voucher ({booking.promoCode} - {booking.promoDiscountPct}%):</span>
-                      <span style={{ fontWeight: 700 }}>
-                        -₦{Number(booking.promoDiscountNGN).toLocaleString()}
+                      <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ backgroundColor: '#d1fae5', color: '#065f46', fontSize: '0.68rem', fontWeight: 800, padding: '1px 6px', borderRadius: '4px' }}>
+                          {booking.promoDiscountPct || 5}% OFF
+                        </span>
+                        <span>Promo Voucher ({booking.promoCode}):</span>
                       </span>
+                      <span style={{ fontWeight: 700 }}>
+                        -{displayPromoDiscount}
+                      </span>
+                    </div>
+                  )}
+
+                  {hasDiscount && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', fontSize: '0.86rem', color: '#059669', fontWeight: 700, backgroundColor: '#d1fae5', padding: '6px 12px', borderRadius: '6px' }}>
+                      <span>Total Savings Applied:</span>
+                      <span>-{displayTotalSavings}</span>
                     </div>
                   )}
 
@@ -773,21 +834,17 @@ function BookingLookupContent() {
                   >
                     <div>
                       <span style={{ fontWeight: 800, fontSize: '1rem', color: 'var(--text-heading)' }}>
-                        Total Amount:
+                        {isPaid ? 'Final Paid Price:' : 'Final Payable Amount:'}
                       </span>
-                      {booking.currency !== 'NGN' && booking.convertedTotal && (
-                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-                          Billed in {booking.currency} ({booking.currency === 'USD' ? `$${Number(booking.convertedTotal).toLocaleString()}` : `£${Number(booking.convertedTotal).toLocaleString()}`})
-                        </div>
-                      )}
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: '1.45rem', fontWeight: 900, color: 'var(--blue-deep)' }}>
-                        {booking.currency === 'USD' && booking.convertedTotal
-                          ? `$${Number(booking.convertedTotal).toLocaleString()}`
-                          : booking.currency === 'GBP' && booking.convertedTotal
-                          ? `£${Number(booking.convertedTotal).toLocaleString()}`
-                          : `₦${Number(booking.finalTotalNGN).toLocaleString()}`}
+                      {hasDiscount && (
+                        <div style={{ fontSize: '0.9rem', color: '#94a3b8', textDecoration: 'line-through', textDecorationColor: '#ef4444', fontWeight: 700 }}>
+                          {displaySubtotal}
+                        </div>
+                      )}
+                      <div style={{ fontSize: '1.45rem', fontWeight: 900, color: hasDiscount ? '#059669' : 'var(--blue-deep)' }}>
+                        {displayFinalTotal}
                       </div>
                       <div style={{ fontSize: '0.78rem', color: isPaid ? '#059669' : '#d97706', fontWeight: 800 }}>
                         {booking.paymentStatus.toUpperCase()}

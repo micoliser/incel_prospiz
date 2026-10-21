@@ -49,7 +49,12 @@ export interface BookingResponse {
   promoDiscountPct?: number;
   promoDiscountNGN: number;
   finalTotalNGN: number;
+  convertedSubtotal?: number | null;
+  convertedGroupDiscount?: number | null;
+  convertedPromoDiscount?: number | null;
+  convertedTotalSavings?: number | null;
   convertedTotal?: number | null;
+  exchangeRate?: number | null;
   currency: string;
   paymentMethod: string;
   paymentStatus: string;
@@ -92,19 +97,19 @@ export interface CampaignStats {
 
 export const DEFAULT_CAMPAIGN_STATS: CampaignStats = {
   earlyBird: {
-    code: 'EARLYBIRD5',
+    code: 'EARLYBIRD17',
     discountPct: 5,
     totalCap: 20,
-    claimed: 18,
-    remaining: 2,
+    claimed: 10,
+    remaining: 10,
     deadline: '2026-11-15T23:59:59+01:00',
     isActive: true,
   },
   globalCap: {
     perPackageCap: 100,
     totalCapacity: 600,
-    totalBooked: 455,
-    totalRemaining: 145,
+    totalBooked: 195,
+    totalRemaining: 405,
   },
   eventDates: {
     start: '2026-12-13T09:00:00+01:00',
@@ -112,8 +117,8 @@ export const DEFAULT_CAMPAIGN_STATS: CampaignStats = {
     display: '13–30 December 2026',
   },
   exchangeRates: {
-    USD: 1600,
-    GBP: 2050,
+    USD: 1400,
+    GBP: 1900,
   },
 };
 
@@ -184,7 +189,7 @@ export async function validatePromo(code: string): Promise<{ valid: boolean; cod
   } catch {
     // Graceful offline fallback
     const upper = code.trim().toUpperCase();
-    if (upper === 'EARLYBIRD5' || upper === 'DETTY5') {
+    if (upper === 'EARLYBIRD17' || upper === 'EARLYBIRD5' || upper === 'DETTY5') {
       return { valid: true, code: upper, discountPct: 5 };
     }
     if (upper === 'VIPLAGOS') {

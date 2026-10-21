@@ -4,7 +4,11 @@ import React, { useState } from 'react';
 import { Mail, Sparkles, CheckCircle2, ArrowRight, AlertCircle } from 'lucide-react';
 import { ScrollReveal } from './ScrollReveal';
 
-export const LeadCapture: React.FC = () => {
+interface LeadCaptureProps {
+  earlyBirdCode?: string;
+}
+
+export const LeadCapture: React.FC<LeadCaptureProps> = ({ earlyBirdCode = 'EARLYBIRD17' }) => {
   const [email, setEmail] = useState('');
   const [whatsapp, setWhatsapp] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -141,7 +145,7 @@ export const LeadCapture: React.FC = () => {
                 fontWeight: 700,
               }}>
                 <CheckCircle2 size={22} style={{ color: '#059669' }} />
-                <span>You’re on the list! Check your inbox for your 5% discount code: <strong>EARLYBIRD5</strong></span>
+                <span>You’re on the list! Check your inbox for your 5% discount code: <strong>{earlyBirdCode}</strong></span>
               </div>
             ) : (
               <form noValidate onSubmit={handleSubmit} style={{

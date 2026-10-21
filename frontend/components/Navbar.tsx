@@ -42,14 +42,14 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header style={{
-      position: 'sticky',
-      top: 0,
+      position: 'relative',
       zIndex: 100,
       backgroundColor: 'rgba(255, 255, 255, 0.98)',
       backdropFilter: 'blur(20px)',
       borderBottom: '1px solid var(--border-light)',
       boxShadow: '0 2px 12px rgba(1, 104, 167, 0.05)',
     }}>
+
       <div className="container" style={{
         display: 'flex',
         alignItems: 'center',
