@@ -1,0 +1,463 @@
+:root {
+  /* Brand Dominant Blue Shades (The Primary & Dominant Identity) */
+  --blue-primary: #0168a7;
+  --blue-deep: #0d47a1;
+  --blue-dark: #072a6b;
+  --blue-navy: #091e42;
+  --blue-light: #0284c7;
+  --blue-sky: #38bdf8;
+  --blue-soft: #e0f2fe;
+  --blue-surface: #f0f7ff;
+  --blue-glow: rgba(1, 104, 167, 0.28);
+  --blue-border: rgba(1, 104, 167, 0.18);
+
+  /* Subtle Warm Accents (Toned down, micro-accents only) */
+  --coral-primary: #ff6b35;
+  --coral-soft: #ff8659;
+  --coral-dark: #e5531d;
+  --coral-surface: #fff7ed;
+  --coral-glow: rgba(255, 107, 53, 0.15);
+
+  /* Partner Green Shades (Prospiz & Security) */
+  --green-prospiz: #0f5132;
+  --green-emerald: #059669;
+  --green-soft: #ecfdf5;
+  --green-border: rgba(16, 185, 129, 0.28);
+  --gold-accent: #b48608;
+
+  /* Modern Light Surfaces & Backgrounds */
+  --bg-main: #ffffff;
+  --bg-subtle: #f8fafc;
+  --bg-alt: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #ffffff;
+  --bg-frosted: rgba(255, 255, 255, 0.92);
+
+  /* Light Theme Borders */
+  --border-light: #e2e8f0;
+  --border-subtle: rgba(1, 104, 167, 0.14);
+  --border-active: rgba(1, 104, 167, 0.4);
+
+  /* High-Contrast Typography (Navy Ink) */
+  --text-heading: #091e42;
+  --text-body: #334e68;
+  --text-secondary: #486581;
+  --text-muted: #627d98;
+  --text-white: #ffffff;
+
+  /* Ambient Layered Shadows */
+  --shadow-sm: 0 1px 3px rgba(9, 30, 66, 0.06), 0 2px 6px rgba(9, 30, 66, 0.04);
+  --shadow-md: 0 4px 16px -2px rgba(1, 104, 167, 0.1), 0 2px 8px -2px rgba(9, 30, 66, 0.05);
+  --shadow-lg: 0 12px 32px -4px rgba(1, 104, 167, 0.14), 0 4px 12px -2px rgba(9, 30, 66, 0.06);
+  --shadow-hover: 0 18px 36px -8px rgba(1, 104, 167, 0.22), 0 6px 16px -4px rgba(9, 30, 66, 0.08);
+  --shadow-blue-btn: 0 6px 20px -2px rgba(1, 104, 167, 0.42);
+
+  /* Radii */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-xl: 26px;
+  --radius-full: 9999px;
+
+  /* Typography */
+  --font-sans: 'Plus Jakarta Sans', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  color-scheme: light;
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-body);
+  font-family: var(--font-sans);
+  line-height: 1.65;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 6px;
+  border: 2px solid #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--blue-primary);
+}
+
+/* Selection Highlight in Brand Blue */
+::selection {
+  background-color: rgba(1, 104, 167, 0.2);
+  color: var(--blue-deep);
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-heading);
+  font-weight: 800;
+  line-height: 1.18;
+  letter-spacing: -0.025em;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button, input, select, textarea {
+  font-family: inherit;
+}
+
+/* Prevent auto-zoom on iOS Safari when tapping inputs */
+@media (max-width: 640px) {
+  input, select, textarea {
+    font-size: 16px !important;
+  }
+}
+
+/* Layout Container with Mobile Padding */
+.container {
+  width: 100%;
+  max-width: 1260px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+@media (max-width: 640px) {
+  .container {
+    padding: 0 16px;
+  }
+}
+
+.section-spacing {
+  padding: 96px 0;
+}
+
+@media (max-width: 768px) {
+  .section-spacing {
+    padding: 56px 0;
+  }
+}
+
+/* Utility to hide scrollbars for horizontal pill bars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Modern Card Styling */
+.card-modern {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-md);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card-modern:hover {
+  transform: translateY(-5px);
+  box-shadow: var(--shadow-hover);
+  border-color: rgba(1, 104, 167, 0.35);
+}
+
+@media (max-width: 640px) {
+  .card-modern {
+    border-radius: var(--radius-lg);
+  }
+  .card-modern:hover {
+    transform: none; /* disable hover lift on touch devices */
+  }
+}
+
+/* Badges */
+.badge-blue {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--blue-surface);
+  color: var(--blue-deep);
+  border: 1px solid rgba(1, 104, 167, 0.25);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.badge-coral {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--coral-surface);
+  color: var(--coral-dark);
+  border: 1px solid rgba(255, 107, 53, 0.25);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.badge-green {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--green-soft);
+  color: var(--green-prospiz);
+  border: 1px solid var(--green-border);
+  padding: 6px 14px;
+  border-radius: var(--radius-full);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+/* Buttons — Primary is now Rich Dominant Sapphire Blue */
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: linear-gradient(135deg, var(--blue-primary) 0%, var(--blue-deep) 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.98rem;
+  padding: 14px 28px;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  box-shadow: var(--shadow-blue-btn);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.btn-primary:hover {
+  background: linear-gradient(135deg, #0277bd 0%, var(--blue-primary) 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 26px -2px rgba(1, 104, 167, 0.55);
+}
+
+.btn-primary:active {
+  transform: translateY(0);
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #ffffff;
+  color: var(--blue-deep);
+  font-weight: 700;
+  font-size: 0.98rem;
+  padding: 14px 26px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid rgba(1, 104, 167, 0.28);
+  cursor: pointer;
+  box-shadow: var(--shadow-sm);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  white-space: nowrap;
+}
+
+.btn-secondary:hover {
+  background: var(--blue-surface);
+  border-color: var(--blue-primary);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.btn-whatsapp {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #25D366;
+  color: #064e23;
+  font-weight: 700;
+  font-size: 0.92rem;
+  padding: 12px 22px;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(37, 211, 102, 0.28);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.btn-whatsapp:hover {
+  background: #20ba59;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(37, 211, 102, 0.38);
+}
+
+@media (max-width: 640px) {
+  .btn-primary, .btn-secondary, .btn-whatsapp {
+    padding: 13px 20px;
+    font-size: 0.92rem;
+  }
+}
+
+/* Scroll Reveal */
+.reveal-on-scroll {
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.65s cubic-bezier(0.16, 1, 0.3, 1),
+              transform 0.65s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: opacity, transform;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.reveal-on-scroll.is-revealed {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal-on-scroll {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+}
+
+/* Pulsing Beacon */
+@keyframes pulseBeacon {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
+}
+
+.beacon-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background-color: #10b981;
+  animation: pulseBeacon 2s infinite;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+/* Mobile Bottom Sheet Drawer Animation */
+@keyframes slideUpDrawer {
+  from {
+    transform: translateY(100%);
+    opacity: 0.9;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.mobile-sheet-content {
+  animation: slideUpDrawer 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 640px) {
+  .btn-primary, .btn-secondary, .btn-whatsapp {
+    min-height: 46px; /* Touch target minimum */
+  }
+}
+
+/* Custom Luxury Form Inputs & Validation Styles */
+@keyframes fadeInError {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.input-custom {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  background-color: #ffffff;
+  border: 1.5px solid var(--border-light);
+  color: var(--text-heading);
+  font-size: 16px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+  outline: none;
+  font-family: inherit;
+}
+
+.input-custom::placeholder {
+  color: var(--text-muted);
+  opacity: 0.8;
+}
+
+.input-custom:hover:not(:disabled):not(.has-error) {
+  border-color: rgba(1, 104, 167, 0.4);
+}
+
+.input-custom:focus {
+  border-color: var(--blue-primary);
+  box-shadow: 0 0 0 3px rgba(1, 104, 167, 0.15);
+  background-color: #ffffff;
+}
+
+.input-custom.has-error {
+  border-color: #ef4444 !important;
+  background-color: #fffbfa !important;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.14) !important;
+}
+
+.input-custom.has-error:focus {
+  border-color: #dc2626 !important;
+  box-shadow: 0 0 0 3.5px rgba(220, 38, 38, 0.2) !important;
+}
+
+.field-error-msg {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  font-size: 0.78rem;
+  color: #b91c1c;
+  font-weight: 600;
+  line-height: 1.35;
+  animation: fadeInError 0.2s ease-out;
+}
+

@@ -1,0 +1,108 @@
+# ==============================================================================
+# Detty December Lagos Luxe - .gitignore
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Environment & Secret Files (Never commit credentials or tokens)
+# ------------------------------------------------------------------------------
+.env
+.env.*
+!.env.example
+!api/.env.example
+!frontend/.env.example
+*.env
+deploy.env
+*.pem
+*.key
+*.cert
+
+# ------------------------------------------------------------------------------
+# Node.js & Next.js Frontend
+# ------------------------------------------------------------------------------
+node_modules/
+frontend/node_modules/
+.next/
+frontend/.next/
+out/
+build/
+dist/
+.pnp
+.pnp.*
+
+# TypeScript Build Info
+*.tsbuildinfo
+next-env.d.ts
+frontend/next-env.d.ts
+
+# NPM / Yarn / PNPM debug logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# ------------------------------------------------------------------------------
+# Python & Django Backend
+# ------------------------------------------------------------------------------
+# Virtual environments
+venv/
+.venv/
+env/
+api/venv/
+api/.venv/
+
+# Bytecode & Caches
+*.py[cod]
+*$py.class
+__pycache__/
+api/**/__pycache__/
+.pytest_cache/
+.coverage
+coverage/
+htmlcov/
+
+# Django local database & static/media artifacts
+db.sqlite3
+*.sqlite3
+staticfiles/
+api/staticfiles/
+media/
+api/media/
+
+# Application and server logs
+*.log
+api/*.log
+api/server.log
+
+# ------------------------------------------------------------------------------
+# IDEs, Editors & Agent Tools
+# ------------------------------------------------------------------------------
+.gemini/
+.impeccable/
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ------------------------------------------------------------------------------
+# Operating System Files
+# ------------------------------------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ------------------------------------------------------------------------------
+# Project Briefs, Specifications & Document Assets
+# ------------------------------------------------------------------------------
+PRODUCT.md
+PRODUCT*.md
+packages.jpeg
+**/packages.jpeg
+*.docx
+*.doc
+*.pptx
+*.ppt
+
