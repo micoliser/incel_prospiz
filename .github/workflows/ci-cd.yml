@@ -154,7 +154,7 @@ jobs:
         uses: caprover/deploy-from-github@v1.1.2
         with:
           server: ${{ secrets.CAPROVER_SERVER }}
-          app: prospiz-api
+          app: incel-prospiz-api
           token: ${{ secrets.CAPROVER_TOKEN_API }}
           image: ghcr.io/${{ env.GHCR_OWNER }}/detty-luxe-backend:${{ env.LATEST_TAG }}
 
@@ -162,6 +162,7 @@ jobs:
         uses: caprover/deploy-from-github@v1.1.2
         with:
           server: ${{ secrets.CAPROVER_SERVER }}
-          app: prospiz-frontend
+          app: incel-prospiz-frontend
           token: ${{ secrets.CAPROVER_TOKEN_FRONTEND }}
           image: ghcr.io/${{ env.GHCR_OWNER }}/detty-luxe-frontend:${{ env.LATEST_TAG }}
+
