@@ -50,7 +50,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       boxShadow: '0 2px 12px rgba(1, 104, 167, 0.05)',
     }}>
 
-      <div className="container" style={{
+      <div className="nav-container" style={{
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'space-between',
@@ -123,7 +123,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           className="desktop-nav"
           style={{
             alignItems: 'center',
-            gap: '6px',
             flexWrap: 'nowrap',
             whiteSpace: 'nowrap',
           }}
@@ -150,7 +149,6 @@ export const Navbar: React.FC<NavbarProps> = ({
           className="desktop-actions"
           style={{
             alignItems: 'center',
-            gap: '12px',
             flexWrap: 'nowrap',
             flexShrink: 0,
           }}
@@ -166,17 +164,16 @@ export const Navbar: React.FC<NavbarProps> = ({
               backgroundColor: 'var(--bg-subtle)',
               border: '1.5px solid var(--border-light)',
               borderRadius: 'var(--radius-full)',
-              padding: '8px 14px',
-              fontSize: '0.84rem',
               fontWeight: 700,
               color: 'var(--text-heading)',
               textDecoration: 'none',
               transition: 'all 0.2s ease',
             }}
             title="Search a reservation by reference"
+            aria-label="Find reservation by reference"
           >
-            <Search size={14} style={{ color: 'var(--blue-primary)' }} />
-            <span>Find Booking</span>
+            <Search size={14} style={{ color: 'var(--blue-primary)', flexShrink: 0 }} />
+            <span className="find-booking-label">Find Booking</span>
           </Link>
 
           {/* Custom Currency Dropdown */}
@@ -274,8 +271,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             href="https://wa.me/2348123456789?text=Hello%20Incel%20%26%20Prospiz%20Team!%20I%20am%20interested%20in%20the%20Detty%20December%20Lagos%20Luxe%202026%20package."
             target="_blank"
             rel="noopener noreferrer"
-            className="btn-whatsapp"
-            style={{ padding: '9px 16px', fontSize: '0.86rem' }}
+            className="btn-whatsapp nav-whatsapp-btn"
           >
             <Phone size={14} />
             <span>WhatsApp</span>
@@ -284,8 +280,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* Book Now Button */}
           <button
             onClick={() => onOpenBooking()}
-            className="btn-primary"
-            style={{ padding: '9px 18px', fontSize: '0.86rem' }}
+            className="btn-primary nav-book-btn"
           >
             Book Seats
           </button>
@@ -459,7 +454,14 @@ export const Navbar: React.FC<NavbarProps> = ({
       )}
 
       <style jsx>{`
-        /* Desktop Nav Link Styles */
+        .nav-container {
+          width: 100%;
+          max-width: 1400px;
+          margin: 0 auto;
+          padding: 0 24px;
+        }
+
+        /* Default mobile state: desktop nav and actions are hidden, mobile toggle is visible */
         .desktop-nav {
           display: none;
         }
@@ -485,6 +487,20 @@ export const Navbar: React.FC<NavbarProps> = ({
           color: var(--blue-deep);
         }
 
+        .find-booking-nav-btn {
+          padding: 8px 14px;
+          font-size: 0.84rem;
+          white-space: nowrap;
+        }
+        .find-booking-nav-btn:hover {
+          border-color: var(--blue-primary);
+          background-color: var(--blue-surface);
+          color: var(--blue-deep);
+        }
+
+        .currency-dropdown-btn {
+          white-space: nowrap;
+        }
         .currency-dropdown-btn:hover {
           border-color: var(--blue-primary);
           background-color: var(--blue-surface);
@@ -493,6 +509,21 @@ export const Navbar: React.FC<NavbarProps> = ({
         .currency-option-item:hover {
           background-color: var(--blue-surface) !important;
           color: var(--blue-deep) !important;
+        }
+
+        .nav-whatsapp-btn {
+          padding: 9px 16px;
+          font-size: 0.86rem;
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          white-space: nowrap;
+        }
+
+        .nav-book-btn {
+          padding: 9px 18px;
+          font-size: 0.86rem;
+          white-space: nowrap;
         }
 
         .mobile-nav-link {
@@ -511,16 +542,119 @@ export const Navbar: React.FC<NavbarProps> = ({
           color: var(--blue-primary);
         }
 
-        /* Desktop Breakpoint */
-        @media (min-width: 1024px) {
+        /* Responsive Tier 1: Wide Desktop (≥ 1320px) */
+        @media (min-width: 1320px) {
           .desktop-nav {
             display: flex !important;
+            gap: 6px;
           }
           .desktop-actions {
             display: flex !important;
+            gap: 12px;
           }
           .mobile-toggle {
             display: none !important;
+          }
+          .nav-whatsapp-btn {
+            display: inline-flex !important;
+          }
+        }
+
+        /* Responsive Tier 2: Standard Desktop & Laptops (1180px - 1319px) */
+        @media (min-width: 1180px) and (max-width: 1319px) {
+          .desktop-nav {
+            display: flex !important;
+            gap: 4px;
+          }
+          .desktop-actions {
+            display: flex !important;
+            gap: 10px;
+          }
+          .mobile-toggle {
+            display: none !important;
+          }
+          .nav-link {
+            padding: 7px 11px;
+            font-size: 0.85rem;
+          }
+          /* Hide redundant WhatsApp button in header on compact viewports to avoid overflow */
+          .nav-whatsapp-btn {
+            display: none !important;
+          }
+          .find-booking-nav-btn {
+            padding: 7px 12px;
+            font-size: 0.82rem;
+          }
+          .currency-dropdown-btn {
+            padding: 7px 12px !important;
+            font-size: 0.82rem !important;
+          }
+          .nav-book-btn {
+            padding: 8px 15px;
+            font-size: 0.84rem;
+          }
+        }
+
+        /* Responsive Tier 3: Compact Laptops (1040px - 1179px) */
+        @media (min-width: 1040px) and (max-width: 1179px) {
+          .desktop-nav {
+            display: flex !important;
+            gap: 2px;
+          }
+          .desktop-actions {
+            display: flex !important;
+            gap: 8px;
+          }
+          .mobile-toggle {
+            display: none !important;
+          }
+          .nav-link {
+            padding: 6px 8px;
+            font-size: 0.82rem;
+          }
+          .nav-whatsapp-btn {
+            display: none !important;
+          }
+          .find-booking-nav-btn {
+            padding: 7px 10px;
+          }
+          .find-booking-label {
+            display: none; /* Icon-only button to guarantee zero overflow */
+          }
+          .currency-dropdown-btn {
+            padding: 6px 10px !important;
+            font-size: 0.8rem !important;
+          }
+          .nav-book-btn {
+            padding: 7px 13px;
+            font-size: 0.82rem;
+          }
+          .nav-logo-incel {
+            width: 92px !important;
+            height: 38px !important;
+          }
+          .nav-logo-prospiz {
+            width: 35px !important;
+            height: 35px !important;
+          }
+        }
+
+        /* Tablet & Mobile (< 1040px): Clean Hamburger Drawer */
+        @media (max-width: 1039px) {
+          .desktop-nav {
+            display: none !important;
+          }
+          .desktop-actions {
+            display: none !important;
+          }
+          .mobile-toggle {
+            display: flex !important;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .nav-container {
+            padding: 0 16px;
           }
         }
 
