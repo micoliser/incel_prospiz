@@ -120,6 +120,11 @@ class SecurityThrottlingAndRendererTests(TestCase):
         self.assertEqual(res_throttled.status_code, status.HTTP_429_TOO_MANY_REQUESTS)
         cache.clear()
 
+    @override_settings(
+        PAYSTACK_SECRET_KEY='sk_test_fake_paystack_key',
+        FLUTTERWAVE_SECRET_KEY='FLWSECK_TEST-fake-key-X',
+        FLUTTERWAVE_SECRET_HASH='test_secret_hash',
+    )
     @patch('requests.get')
     def test_high_01_payment_verify_rate_limited(self, mock_get):
         """HIGH-01: Verify that payment verification is throttled at 15/min (HTTP 429)."""

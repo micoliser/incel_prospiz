@@ -10,6 +10,11 @@ from core.models import Booking, Package
 from core.payments import confirm_booking_payment
 
 
+@override_settings(
+    PAYSTACK_SECRET_KEY='sk_test_fake_paystack_key',
+    FLUTTERWAVE_SECRET_KEY='FLWSECK_TEST-fake-key-X',
+    FLUTTERWAVE_SECRET_HASH='test_secret_hash',
+)
 class MediumSecurityFixesTestCase(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -51,7 +56,7 @@ class MediumSecurityFixesTestCase(TestCase):
             }
         }
         body_bytes = json.dumps(payload).encode('utf-8')
-        secret = getattr(settings, 'PAYSTACK_SECRET_KEY', 'sk_test_fake')
+        secret = settings.PAYSTACK_SECRET_KEY
         signature = hmac.new(secret.encode('utf-8'), body_bytes, hashlib.sha512).hexdigest()
 
         res = self.client.post(
@@ -75,7 +80,7 @@ class MediumSecurityFixesTestCase(TestCase):
             '/api/payments/flutterwave/webhook/',
             data=payload,
             format='json',
-            HTTP_VERIF_HASH=getattr(settings, 'FLUTTERWAVE_SECRET_HASH', 'test_secret'),
+            HTTP_VERIF_HASH=settings.FLUTTERWAVE_SECRET_HASH,
         )
         self.assertEqual(res.status_code, status.HTTP_404_NOT_FOUND)
         self.assertIn("not found", res.data.get('error', '').lower())
