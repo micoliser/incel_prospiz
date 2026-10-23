@@ -11,8 +11,8 @@ load_dotenv(BASE_DIR / '.env')
 # ------------------------------------------------------------------------------
 # 1. CORE DJANGO SETTINGS
 # ------------------------------------------------------------------------------
-# In production, set DJANGO_DEBUG=False
-DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() in ('true', '1', 'yes')
+# In production, set DJANGO_DEBUG=False. Defaults to False so misconfigured environments fail safe (NEW-04)
+DEBUG = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
 
 DEFAULT_DEV_SECRET = 'django-insecure-lw-2ccog109jl^*dhsiibg2%y6*#p9-*7f+_m@7j2*hxjba$i@'
 SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', DEFAULT_DEV_SECRET)
@@ -22,6 +22,9 @@ if raw_allowed_hosts:
     ALLOWED_HOSTS = [h.strip() for h in raw_allowed_hosts.split(',') if h.strip()]
 else:
     ALLOWED_HOSTS = ['*'] if DEBUG else []
+
+# Custom admin URL prefix (HIGH-04: avoids predictable default /admin/ in production)
+DJANGO_ADMIN_URL = os.getenv('DJANGO_ADMIN_URL', 'admin/').strip('/') + '/'
 
 # Application definition
 INSTALLED_APPS = [
@@ -121,22 +124,51 @@ STORAGES = {
         'BACKEND': 'django.core.files.storage.FileSystemStorage',
     },
     'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        'BACKEND': 'django.contrib.staticfiles.storage.StaticFilesStorage' if (DEBUG or 'test' in sys.argv) else 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
 }
 
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Number of reverse proxies in front of Django (e.g. CapRover nginx = 1 proxy).
+# Used by DRF throttling and Admin login rate limiting (HIGH-01, HIGH-04)
+NUM_PROXIES = int(os.getenv('NUM_PROXIES', '1'))
+
+# Shared caching across Gunicorn workers for throttling and lockouts (HIGH-01)
+if 'test' in sys.argv:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        }
+    }
+else:
+    CACHES = {
+        'default': {
+            'BACKEND': 'django.core.cache.backends.db.DatabaseCache',
+            'LOCATION': 'django_cache_table',
+        }
+    }
+
 # REST Framework settings
 REST_FRAMEWORK = {
+    'NUM_PROXIES': NUM_PROXIES,
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',
     ],
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
-        'rest_framework.renderers.BrowsableAPIRenderer',
+    ] + (['rest_framework.renderers.BrowsableAPIRenderer'] if DEBUG else []),
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
     ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '120/minute',
+        'promo_validate': '10/minute',
+        'booking_create': '10/minute',
+        'booking_lookup': '15/minute',
+        'payment_verify': '15/minute',
+    },
 }
 
 # ------------------------------------------------------------------------------
@@ -146,11 +178,17 @@ PAYSTACK_SECRET_KEY = os.getenv('PAYSTACK_SECRET_KEY', '')
 PAYSTACK_PUBLIC_KEY = os.getenv('PAYSTACK_PUBLIC_KEY', '')
 FLUTTERWAVE_SECRET_KEY = os.getenv('FLUTTERWAVE_SECRET_KEY', '')
 FLUTTERWAVE_PUBLIC_KEY = os.getenv('FLUTTERWAVE_PUBLIC_KEY', '')
-FLUTTERWAVE_SECRET_HASH = os.getenv('FLUTTERWAVE_SECRET_HASH', 'test_secret' if DEBUG else '')
+FLUTTERWAVE_SECRET_HASH = os.getenv('FLUTTERWAVE_SECRET_HASH', '')
 FRONTEND_BASE_URL = os.getenv('FRONTEND_BASE_URL', 'http://localhost:3000' if DEBUG else '')
 
 # Reservation temporary seat hold window in minutes before automatic cancellation (default: 30)
 BOOKING_HOLD_TIMEOUT_MINUTES = int(os.getenv('BOOKING_HOLD_TIMEOUT_MINUTES', 30))
+
+# Cloudflare Turnstile CAPTCHA configuration
+# Cloudflare universal test secret (always passes) is only used as a default in DEBUG (NEW-02)
+TURNSTILE_SECRET_KEY = os.getenv('TURNSTILE_SECRET_KEY', '1x0000000000000000000000000000000AA' if DEBUG else '')
+TESTING = 'test' in sys.argv
+TURNSTILE_REQUIRED = False if (DEBUG or TESTING) else os.getenv('TURNSTILE_REQUIRED', 'True').lower() in ('true', '1')
 
 # ------------------------------------------------------------------------------
 # 4. CORS & CSRF CONFIGURATION
@@ -175,6 +213,22 @@ else:
         if host and host != '*':
             csrf_origins.append(f"https://{host}")
     CSRF_TRUSTED_ORIGINS = csrf_origins
+
+# ------------------------------------------------------------------------------
+# 4.1 SECURITY HEADERS & SSL ENFORCEMENT (MEDIUM-01)
+# ------------------------------------------------------------------------------
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+X_FRAME_OPTIONS = 'DENY'
+
+if not DEBUG and 'test' not in sys.argv:
+    SECURE_SSL_REDIRECT = os.getenv('DJANGO_SECURE_SSL_REDIRECT', 'True').lower() in ('true', '1')
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    SECURE_HSTS_SECONDS = int(os.getenv('DJANGO_SECURE_HSTS_SECONDS', '31536000'))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
 
 # ------------------------------------------------------------------------------
 # 5. EMAIL CONFIGURATION
@@ -216,6 +270,9 @@ def validate_production_settings(
     flutterwave_secret_key=None,
     flutterwave_public_key=None,
     flutterwave_secret_hash=None,
+    rest_framework_config=None,
+    turnstile_secret_key=None,
+    turnstile_required=None,
 ):
     """
     Validates that all critical production credentials and security variables
@@ -231,6 +288,9 @@ def validate_production_settings(
     flw_sec = flutterwave_secret_key if flutterwave_secret_key is not None else FLUTTERWAVE_SECRET_KEY
     flw_pub = flutterwave_public_key if flutterwave_public_key is not None else FLUTTERWAVE_PUBLIC_KEY
     flw_hash = flutterwave_secret_hash if flutterwave_secret_hash is not None else FLUTTERWAVE_SECRET_HASH
+    rf_config = rest_framework_config if rest_framework_config is not None else REST_FRAMEWORK
+    ts_secret = turnstile_secret_key if turnstile_secret_key is not None else TURNSTILE_SECRET_KEY
+    ts_required = turnstile_required if turnstile_required is not None else TURNSTILE_REQUIRED
 
     errors = []
 
@@ -271,6 +331,18 @@ def validate_production_settings(
         errors.append("FLUTTERWAVE_PUBLIC_KEY: Flutterwave Public Key is missing.")
     if not flw_hash or flw_hash == 'test_secret':
         errors.append("FLUTTERWAVE_SECRET_HASH: Flutterwave webhook Secret Hash is missing or using default 'test_secret'.")
+
+    # 7. Browsable API Check (CRITICAL-04)
+    if rest_framework_config is not None:
+        if 'rest_framework.renderers.BrowsableAPIRenderer' in rest_framework_config.get('DEFAULT_RENDERER_CLASSES', []):
+            errors.append("REST_FRAMEWORK: BrowsableAPIRenderer is strictly forbidden in production.")
+    elif not DEBUG:
+        if 'rest_framework.renderers.BrowsableAPIRenderer' in REST_FRAMEWORK.get('DEFAULT_RENDERER_CLASSES', []):
+            errors.append("REST_FRAMEWORK: BrowsableAPIRenderer is strictly forbidden in production.")
+
+    # 8. Turnstile CAPTCHA Check (NEW-02): Cloudflare test secrets (1x/2x/3x000...) are not allowed
+    if ts_required and (not ts_secret or ts_secret[:2] in ('1x', '2x', '3x')):
+        errors.append("TURNSTILE_SECRET_KEY: Missing or using a Cloudflare test secret. Use your real Turnstile secret key.")
 
     if errors:
         error_message = (

@@ -1,8 +1,10 @@
 import uuid
 import random
 import string
+import secrets
 import datetime
 from django.db import models, transaction
+from django.db.models.functions import Greatest
 from django.utils import timezone
 from django.conf import settings
 
@@ -72,7 +74,7 @@ class CampaignConfig(models.Model):
     early_bird_code = models.CharField(max_length=50, default='EARLYBIRD5', help_text="Promo code used for early bird claims")
     early_bird_discount_pct = models.PositiveIntegerField(default=5)
     early_bird_cap = models.PositiveIntegerField(default=20, help_text="Total allocation of early bird seats")
-    early_bird_baseline_claimed = models.PositiveIntegerField(default=18, help_text="Starting baseline claimed count")
+    early_bird_baseline_claimed = models.PositiveIntegerField(default=0, help_text="Starting baseline claimed count (0 by default to reflect real bookings)")
     early_bird_deadline = models.DateTimeField(help_text="Deadline for early bird discount")
     event_start_date = models.DateTimeField(help_text="Main event start datetime")
     event_end_date = models.DateTimeField(help_text="Main event end datetime")
@@ -92,26 +94,37 @@ class CampaignConfig(models.Model):
     @classmethod
     def get_settings(cls):
         from django.utils import timezone
+        from django.conf import settings
         import datetime
+        import logging
+        logger = logging.getLogger(__name__)
         cfg = cls.objects.first()
         if not cfg:
             tz = timezone.get_current_timezone()
             deadline = timezone.make_aware(datetime.datetime(2026, 11, 15, 23, 59, 59), tz)
             start_dt = timezone.make_aware(datetime.datetime(2026, 12, 13, 9, 0, 0), tz)
             end_dt = timezone.make_aware(datetime.datetime(2026, 12, 30, 23, 59, 59), tz)
+            default_baseline = int(getattr(settings, 'CAMPAIGN_EARLY_BIRD_BASELINE', 0))
+            default_usd = getattr(settings, 'CAMPAIGN_DEFAULT_USD_RATE', 1600.00)
+            default_gbp = getattr(settings, 'CAMPAIGN_DEFAULT_GBP_RATE', 2050.00)
             cfg = cls.objects.create(
                 early_bird_code='EARLYBIRD5',
                 early_bird_discount_pct=5,
                 early_bird_cap=20,
-                early_bird_baseline_claimed=18,
+                early_bird_baseline_claimed=default_baseline,
                 early_bird_deadline=deadline,
                 event_start_date=start_dt,
                 event_end_date=end_dt,
                 per_package_cap=100,
-                usd_to_ngn_rate=1600.00,
-                gbp_to_ngn_rate=2050.00,
+                usd_to_ngn_rate=default_usd,
+                gbp_to_ngn_rate=default_gbp,
             )
+            logger.info("CampaignConfig initialized with default baseline=%d. Customize in Admin.", default_baseline)
         return cfg
+
+
+# Unambiguous 32-character uppercase alphanumeric alphabet (excludes easily confused chars 0, O, 1, I)
+BOOKING_REF_ALPHABET = "23456789ABCDEFGHJKLMNPQRSTUVWXYZ"
 
 
 class Booking(models.Model):
@@ -164,15 +177,22 @@ class Booking(models.Model):
 
     class Meta:
         ordering = ['-created_at']
+        constraints = [
+            models.UniqueConstraint(
+                fields=['payment_reference'],
+                condition=models.Q(payment_status='paid') & ~models.Q(payment_reference=''),
+                name='unique_paid_payment_reference'
+            )
+        ]
 
     def save(self, *args, **kwargs):
         if not self.booking_ref:
-            # Generate reference like DL-2026-7841
-            random_suffix = ''.join(random.choices(string.digits, k=4))
-            self.booking_ref = f"DL-2026-{random_suffix}"
+            # Generate high-entropy reference like DL-2026-K7M9P2 (over 1.07 billion combinations)
+            suffix = ''.join(secrets.choice(BOOKING_REF_ALPHABET) for _ in range(6))
+            self.booking_ref = f"DL-2026-{suffix}"
             while Booking.objects.filter(booking_ref=self.booking_ref).exists():
-                random_suffix = ''.join(random.choices(string.digits, k=4))
-                self.booking_ref = f"DL-2026-{random_suffix}"
+                suffix = ''.join(secrets.choice(BOOKING_REF_ALPHABET) for _ in range(6))
+                self.booking_ref = f"DL-2026-{suffix}"
         super().save(*args, **kwargs)
 
     def __str__(self):
@@ -286,8 +306,9 @@ class Booking(models.Model):
                         locked_ids.add(ep.id)
 
             for pkg in locked_pkgs:
-                new_booked = max(0, pkg.seats_booked - guest_count)
-                Package.objects.filter(id=pkg.id).update(seats_booked=new_booked)
+                Package.objects.filter(id=pkg.id).update(
+                    seats_booked=Greatest(models.F('seats_booked') - guest_count, 0)
+                )
 
             locked.payment_status = 'cancelled'
             locked.save(update_fields=['payment_status', 'updated_at'])

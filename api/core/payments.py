@@ -1,10 +1,67 @@
+from urllib.parse import urlparse
 import logging
 import requests
 from django.conf import settings
+from django.db import transaction, IntegrityError
 from django.utils import timezone
 from .models import Booking
 
 logger = logging.getLogger(__name__)
+
+
+def validate_safe_callback_url(callback_url: str) -> str:
+    """
+    HIGH-05: Validates client-provided payment callback/redirect URLs to prevent Open Redirect
+    and payment reference exfiltration attacks.
+    Only allows domains that match FRONTEND_BASE_URL or CORS_ALLOWED_ORIGINS.
+    Falls back to the canonical '{FRONTEND_BASE_URL}/booking/verify'.
+    """
+    frontend_base = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3000').rstrip('/')
+    safe_default = f"{frontend_base}/booking/verify"
+
+    if not callback_url:
+        return safe_default
+
+    try:
+        parsed = urlparse(callback_url)
+        # If relative URL was passed (e.g., '/booking/verify')
+        if not parsed.scheme or not parsed.netloc:
+            if callback_url.startswith('/'):
+                return f"{frontend_base}{callback_url}"
+            return safe_default
+
+        provided_origin = f"{parsed.scheme}://{parsed.netloc}".rstrip('/').lower()
+
+        allowed_origins = set()
+        if frontend_base:
+            p_base = urlparse(frontend_base)
+            allowed_origins.add(f"{p_base.scheme}://{p_base.netloc}".rstrip('/').lower())
+
+        cors_origins = getattr(settings, 'CORS_ALLOWED_ORIGINS', [])
+        for o in cors_origins:
+            p_cors = urlparse(o)
+            if p_cors.scheme and p_cors.netloc:
+                allowed_origins.add(f"{p_cors.scheme}://{p_cors.netloc}".rstrip('/').lower())
+
+        if settings.DEBUG:
+            allowed_origins.update([
+                'http://localhost:3000',
+                'http://127.0.0.1:3000',
+                'http://localhost:8000',
+                'http://127.0.0.1:8000',
+            ])
+
+        if provided_origin in allowed_origins:
+            return callback_url
+
+        logger.warning(
+            "HIGH-05 Open Redirect Prevented: Untrusted callback URL '%s' rejected. Falling back to '%s'",
+            callback_url, safe_default
+        )
+        return safe_default
+    except Exception as exc:
+        logger.warning("Error parsing callback URL %s: %s", callback_url, exc)
+        return safe_default
 
 
 def initialize_paystack_payment(booking: Booking, callback_url: str = None) -> dict:
@@ -16,8 +73,7 @@ def initialize_paystack_payment(booking: Booking, callback_url: str = None) -> d
         logger.error("Paystack Secret Key is not configured in settings.")
         return {"status": False, "error": "Paystack is not configured on the server."}
 
-    frontend_base = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3000').rstrip('/')
-    target_callback = callback_url or f"{frontend_base}/booking/verify"
+    target_callback = validate_safe_callback_url(callback_url)
 
     # Amount in kobo (1 NGN = 100 kobo)
     amount_kobo = int(booking.final_total_ngn * 100)
@@ -85,8 +141,7 @@ def initialize_flutterwave_payment(booking: Booking, redirect_url: str = None) -
         logger.error("Flutterwave Secret Key is not configured in settings.")
         return {"status": False, "error": "Flutterwave is not configured on the server."}
 
-    frontend_base = getattr(settings, 'FRONTEND_BASE_URL', 'http://localhost:3000').rstrip('/')
-    target_redirect = redirect_url or f"{frontend_base}/booking/verify"
+    target_redirect = validate_safe_callback_url(redirect_url)
 
     # Currency and amount handling
     if booking.currency in ['USD', 'GBP'] and booking.converted_total:
@@ -230,23 +285,166 @@ def verify_flutterwave_transaction(transaction_id: str) -> dict:
 def confirm_booking_payment(booking: Booking, payment_reference: str = None) -> bool:
     """
     Marks booking as paid and stores paid_at timestamp.
-    Triggers automated customer receipt and internal team notification emails.
+    Uses select_for_update inside an atomic transaction to ensure strict idempotency
+    under concurrent webhook and verification callback arrivals (MEDIUM-03).
+    Triggers automated customer receipt and internal team notification emails once.
     """
-    if booking.payment_status != 'paid':
-        booking.payment_status = 'paid'
-        booking.paid_at = timezone.now()
-        if payment_reference:
-            booking.payment_reference = payment_reference
-        booking.save(update_fields=['payment_status', 'paid_at', 'payment_reference'])
-        logger.info("Booking %s marked as PAID.", booking.booking_ref)
+    try:
+        with transaction.atomic():
+            locked_booking = Booking.objects.select_for_update().get(id=booking.id)
+            if locked_booking.payment_status == 'paid':
+                logger.info("Booking %s is already marked as PAID (skipping duplicate confirmation).", locked_booking.booking_ref)
+                return False
 
-        # Trigger confirmation emails (Customer + Internal Operations Team)
+            # NEW-01: A single gateway transaction may only ever pay for one booking (replay protection)
+            if payment_reference and Booking.objects.filter(
+                payment_reference=payment_reference, payment_status='paid'
+            ).exclude(id=locked_booking.id).exists():
+                logger.warning(
+                    "Replay blocked: transaction %s already paid another booking; refusing to confirm %s.",
+                    payment_reference, locked_booking.booking_ref,
+                )
+                return False
+
+            locked_booking.payment_status = 'paid'
+            locked_booking.paid_at = timezone.now()
+            if payment_reference:
+                locked_booking.payment_reference = payment_reference
+            locked_booking.save(update_fields=['payment_status', 'paid_at', 'payment_reference'])
+
+            # Keep caller's in-memory instance synchronized
+            booking.payment_status = locked_booking.payment_status
+            booking.paid_at = locked_booking.paid_at
+            booking.payment_reference = locked_booking.payment_reference
+
+    except IntegrityError:
+        logger.warning(
+            "Concurrent replay collision blocked: transaction %s already claimed by another paid booking.",
+            payment_reference
+        )
+        return False
+
+    logger.info("Booking %s marked as PAID.", booking.booking_ref)
+
+    # Trigger confirmation emails (Customer + Internal Operations Team)
+    try:
+        from core.emails.services.booking_emails import send_booking_confirmation_emails
+        send_booking_confirmation_emails(booking, is_async=True)
+    except Exception as exc:
+        logger.exception("Failed to dispatch confirmation emails for %s: %s", booking.booking_ref, exc)
+
+    return True
+
+
+def validate_payment_amount_and_currency(
+    booking: Booking,
+    gateway: str,
+    amount,
+    currency,
+    fees=None,
+    requested_amount=None,
+    settled_amount=None,
+) -> tuple[bool, str]:
+    """
+    Validates that the amount and currency returned by the payment gateway
+    satisfy what is expected for the given booking. Prevents payment underpayment / manipulation (CRITICAL-02)
+    while gracefully supporting setups where transaction fees are passed to the customer.
+    """
+    if amount is None:
+        return False, "Missing transaction amount from payment gateway."
+
+    gateway_norm = gateway.lower()
+
+    if gateway_norm == 'paystack':
+        # Paystack operates in kobo (1 NGN = 100 kobo)
+        expected_kobo = int(booking.final_total_ngn * 100)
         try:
-            from core.emails.services.booking_emails import send_booking_confirmation_emails
-            send_booking_confirmation_emails(booking, is_async=True)
-        except Exception as exc:
-            logger.exception("Failed to dispatch confirmation emails for %s: %s", booking.booking_ref, exc)
+            paid_kobo = int(amount)
+        except (ValueError, TypeError):
+            return False, f"Invalid Paystack amount format: {amount}"
 
-        return True
-    return False
+        paid_currency = str(currency).upper() if currency else 'NGN'
+        if paid_currency != 'NGN':
+            return False, f"Paystack currency mismatch: expected NGN, received {currency}."
+
+        # Case 1: Exact match (standard merchant-borne fee)
+        if paid_kobo == expected_kobo:
+            return True, ""
+
+        # Case 2: Paystack provides requested_amount (pre-fee base amount requested)
+        if requested_amount is not None:
+            try:
+                if int(requested_amount) == expected_kobo:
+                    return True, ""
+            except (ValueError, TypeError):
+                pass
+
+        # Case 3: Net settlement match via fees breakdown (paid_amount - fees == expected_kobo)
+        if fees is not None:
+            try:
+                if paid_kobo - int(fees) == expected_kobo:
+                    return True, ""
+            except (ValueError, TypeError):
+                pass
+
+        # Case 4: Customer bears the fee on Paystack (customer paid more than expected to cover gateway fee)
+        if paid_kobo >= expected_kobo:
+            logger.info(
+                "Paystack payment for %s verified with customer-borne fee: expected %s kobo, received %s kobo (fee: %s kobo)",
+                booking.booking_ref, expected_kobo, paid_kobo, paid_kobo - expected_kobo
+            )
+            return True, ""
+
+        # Strictly reject underpayment (paid_kobo < expected_kobo)
+        return False, f"Paystack underpayment detected: expected at least {expected_kobo} kobo, received {paid_kobo} kobo."
+
+    elif gateway_norm == 'flutterwave':
+        # Flutterwave operates in standard currency units (e.g. 520000.00 NGN or 325.00 USD)
+        try:
+            paid_amount = float(amount)
+        except (ValueError, TypeError):
+            return False, f"Invalid Flutterwave amount format: {amount}"
+
+        if booking.currency in ['USD', 'GBP'] and booking.converted_total:
+            expected_amount = float(booking.converted_total)
+            expected_currency = booking.currency
+        else:
+            expected_amount = float(booking.final_total_ngn)
+            expected_currency = 'NGN'
+
+        paid_currency = str(currency).upper() if currency else expected_currency
+        if paid_currency != expected_currency:
+            return False, f"Flutterwave currency mismatch: expected {expected_currency}, received {currency}."
+
+        # Case 1: Close match within 0.05 currency units
+        if abs(paid_amount - expected_amount) <= 0.05:
+            return True, ""
+
+        # Case 2: Settled amount match (merchant proceeds)
+        if settled_amount is not None:
+            try:
+                if abs(float(settled_amount) - expected_amount) <= 0.05:
+                    return True, ""
+            except (ValueError, TypeError):
+                pass
+
+        # Case 3: Net settlement match via fees breakdown (paid_amount - fees == expected_amount)
+        if fees is not None:
+            try:
+                if abs((paid_amount - float(fees)) - expected_amount) <= 0.05:
+                    return True, ""
+            except (ValueError, TypeError):
+                pass
+
+        # Case 4: Customer bears fee on Flutterwave (paid_amount >= expected_amount)
+        if paid_amount >= expected_amount:
+            logger.info(
+                "Flutterwave payment for %s verified with customer-borne fee: expected %s %s, received %s %s",
+                booking.booking_ref, expected_amount, expected_currency, paid_amount, paid_currency
+            )
+            return True, ""
+
+        return False, f"Flutterwave underpayment detected: expected at least {expected_amount} {expected_currency}, received {paid_amount} {currency}."
+
+    return False, f"Unsupported payment gateway: {gateway}"
 

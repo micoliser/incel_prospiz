@@ -57,7 +57,7 @@ class PromoCodeValidateSerializer(serializers.Serializer):
 
 class BookingCreateSerializer(serializers.ModelSerializer):
     fullName = serializers.CharField(source='full_name')
-    guestCount = serializers.IntegerField(source='guest_count', min_value=1)
+    guestCount = serializers.IntegerField(source='guest_count', min_value=1, max_value=10)
     isForeigner = serializers.BooleanField(source='is_foreigner', default=False)
     selectedPackages = serializers.ListField(
         child=serializers.CharField(),
@@ -75,8 +75,10 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         allow_blank=True,
         allow_null=True
     )
+    # LOW-06: Maximum input length validation to prevent payload bloat / DoS
     specialRequests = serializers.CharField(
         source='special_requests',
+        max_length=1000,
         required=False,
         allow_blank=True
     )
@@ -104,7 +106,8 @@ class BookingCreateSerializer(serializers.ModelSerializer):
         if value:
             cleaned = value.strip().upper()
             if not PromoCode.objects.filter(code__iexact=cleaned, is_active=True).exists():
-                raise serializers.ValidationError(f"Promo code '{value}' is invalid or expired.")
+                # LOW-03: Uniform error message preventing promo code enumeration
+                raise serializers.ValidationError("Invalid or expired promo code.")
             return cleaned
         return value
 
@@ -324,3 +327,63 @@ class BookingDetailSerializer(serializers.ModelSerializer):
             }
             for p in packages
         ]
+
+
+def mask_email(email: str) -> str:
+    """Mask email while retaining recognizable domain and prefix: e.g. kola@example.com -> k***a@example.com"""
+    if not email or '@' not in email:
+        return '***'
+    user, domain = email.split('@', 1)
+    if len(user) <= 1:
+        masked_user = user + '***'
+    elif len(user) == 2:
+        masked_user = user[0] + '***'
+    else:
+        masked_user = user[0] + '***' + user[-1]
+    return f"{masked_user}@{domain}"
+
+
+def mask_phone(phone: str) -> str:
+    """Mask phone keeping prefix and last 4 digits: e.g. +2348055667788 -> +234 ••• ••• 7788"""
+    if not phone:
+        return '***'
+    cleaned = phone.strip()
+    if len(cleaned) <= 6:
+        return '***' + cleaned[-2:]
+    prefix = cleaned[:4]
+    suffix = cleaned[-4:]
+    return f"{prefix} ••• ••• {suffix}"
+
+
+def mask_full_name(name: str) -> str:
+    """Mask full name preserving first name and last initial: e.g. Kolawole Ajayi -> Kolawole A."""
+    if not name:
+        return '***'
+    parts = name.strip().split()
+    if len(parts) == 1:
+        single = parts[0]
+        return single[:2] + '***' if len(single) > 2 else single + '***'
+    return f"{parts[0]} {parts[-1][0]}."
+
+
+class BookingLookupSerializer(BookingDetailSerializer):
+    """
+    Public lookup serializer that masks sensitive personal identifiable information (PII)
+    to prevent harvesting/IDOR while providing legitimate customers confirmation of their reservation.
+    """
+    fullName = serializers.SerializerMethodField()
+    email = serializers.SerializerMethodField()
+    phone = serializers.SerializerMethodField()
+    specialRequests = serializers.SerializerMethodField()
+
+    def get_fullName(self, obj):
+        return mask_full_name(obj.full_name)
+
+    def get_email(self, obj):
+        return mask_email(obj.email)
+
+    def get_phone(self, obj):
+        return mask_phone(obj.phone)
+
+    def get_specialRequests(self, obj):
+        return '***' if obj.special_requests else ''

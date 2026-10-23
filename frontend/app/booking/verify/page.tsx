@@ -405,15 +405,8 @@ function VerifyPaymentContent() {
     ? `${sym}${Number(booking.convertedTotal).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
     : `₦${Number(booking.finalTotalNGN || 0).toLocaleString()}`;
 
-  const discountNotes: string[] = [];
-  if (groupDiscount > 0) discountNotes.push(`Group Discount (5%): -${displayGroupDiscount}`);
-  if (promoDiscount > 0) discountNotes.push(`Promo ${booking.promoCode}: -${displayPromoDiscount}`);
-  const discountString = discountNotes.length > 0 ? `%0A*Discounts Applied:* ${discountNotes.join(', ')}` : '';
-  const priceInfo = hasDiscount
-    ? `%0A*Initial Price:* ${displaySubtotal}${discountString}%0A*Final Paid:* ${displayFinalTotal}`
-    : `%0A*Final Paid:* ${displayFinalTotal}`;
-
-  const whatsappMsg = `Hello Incel Holidays & Prospiz Team! I have completed payment for Detty December Lagos Luxe.%0A%0A*Booking ID:* ${booking.bookingRef}%0A*Name:* ${booking.fullName}%0A*Guests:* ${booking.guestCount}${priceInfo}%0A*Status:* ${booking.paymentStatus.toUpperCase()}`;
+  // LOW-02: Clean, reference-only WhatsApp message without cleartext PII, financial totals, or email/phone
+  const whatsappMsg = `Hello Incel Holidays & Prospiz Team! I have completed payment for Detty December Lagos Luxe.%0A%0A*Booking Reference:* ${booking.bookingRef}%0A*Status:* ${booking.paymentStatus.toUpperCase()}`;
 
   return (
     <div style={{ minHeight: '85vh', padding: '48px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

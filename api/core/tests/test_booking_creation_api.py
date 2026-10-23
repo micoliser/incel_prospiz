@@ -1,5 +1,6 @@
 import uuid
 from django.test import TestCase
+from django.core.cache import cache
 from rest_framework.test import APIClient
 from rest_framework import status
 from core.models import Package, PromoCode, Booking
@@ -8,6 +9,7 @@ from core.models import Package, PromoCode, Booking
 class BookingCreationAPITest(TestCase):
     def setUp(self):
         self.client = APIClient()
+        cache.clear()
 
         self.abeokuta = Package.objects.create(
             slug='abeokuta-heritage',
@@ -53,6 +55,9 @@ class BookingCreationAPITest(TestCase):
             discount_pct=10,
             is_active=True,
         )
+
+    def tearDown(self):
+        cache.clear()
 
     def test_create_standard_single_booking(self):
         payload = {
@@ -155,7 +160,7 @@ class BookingCreationAPITest(TestCase):
         payload_3 = {
             'fullName': 'Group of Three',
             'email': 'group3@example.com',
-            'phone': '+2348012345678',
+            'phone': '+2348012345003',
             'guestCount': 3,
             'selectedPackages': ['abeokuta-heritage'],
         }
@@ -169,7 +174,7 @@ class BookingCreationAPITest(TestCase):
         payload_4 = {
             'fullName': 'Group of Four',
             'email': 'group4@example.com',
-            'phone': '+2348012345678',
+            'phone': '+2348012345004',
             'guestCount': 4,
             'selectedPackages': ['abeokuta-heritage'],
         }
@@ -185,7 +190,7 @@ class BookingCreationAPITest(TestCase):
         payload_8 = {
             'fullName': 'Group of Eight',
             'email': 'group8@example.com',
-            'phone': '+2348012345678',
+            'phone': '+2348012345008',
             'guestCount': 8,
             'selectedPackages': ['abeokuta-heritage'],
         }
@@ -248,11 +253,11 @@ class BookingCreationAPITest(TestCase):
         self.assertEqual(res.json()['subtotalNGN'], 75000)
 
     def test_payment_method_options(self):
-        for method in ['paystack', 'flutterwave', 'whatsapp', 'card', 'transfer']:
+        for idx, method in enumerate(['paystack', 'flutterwave', 'whatsapp', 'card', 'transfer']):
             payload = {
                 'fullName': f'User {method}',
                 'email': f'{method}@example.com',
-                'phone': '+2348012345678',
+                'phone': f'+234801234560{idx}',
                 'guestCount': 1,
                 'selectedPackages': ['abeokuta-heritage'],
                 'paymentMethod': method,

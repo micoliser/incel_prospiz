@@ -37,12 +37,12 @@ def build_booking_email_context(booking: Booking) -> Dict[str, Any]:
 
     lookup_url = f"{frontend_base}/booking/lookup?ref={booking.booking_ref}"
 
-    # WhatsApp link for direct team-to-customer communication
+    # WhatsApp link for direct team-to-customer communication (LOW-02: minimal PII in URL query)
     clean_phone = ''.join(c for c in str(booking.phone) if c.isdigit() or c == '+')
     if clean_phone.startswith('0'):
         clean_phone = '234' + clean_phone[1:]
     clean_phone = clean_phone.lstrip('+')
-    whatsapp_url = f"https://wa.me/{clean_phone}?text=Hello%20{booking.full_name},%20this%20is%20the%20Incel%20Holidays%20team%20regarding%20your%20Detty%20December%20Lagos%20Luxe%20booking%20{booking.booking_ref}."
+    whatsapp_url = f"https://wa.me/{clean_phone}?text=Hello,%20this%20is%20the%20Incel%20Holidays%20team%20regarding%20your%20Detty%20December%20Lagos%20Luxe%20booking%20{booking.booking_ref}."
 
     # Format payment method label
     method_raw = (booking.payment_method or '').lower()

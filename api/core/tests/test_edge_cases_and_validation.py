@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.core.cache import cache
 from rest_framework.test import APIClient
 from rest_framework import status
 from core.models import Package, PromoCode, Booking
@@ -7,6 +8,7 @@ from core.models import Package, PromoCode, Booking
 class EdgeCasesAndValidationTest(TestCase):
     def setUp(self):
         self.client = APIClient()
+        cache.clear()
 
         self.excursion = Package.objects.create(
             slug='abeokuta-heritage',
@@ -29,6 +31,9 @@ class EdgeCasesAndValidationTest(TestCase):
             discount_pct=5,
             is_active=False,
         )
+
+    def tearDown(self):
+        cache.clear()
 
     def test_missing_full_name_rejected(self):
         payload = {

@@ -15,6 +15,8 @@ export interface BookingPayload {
   paymentMethod: 'paystack' | 'flutterwave' | 'whatsapp' | 'card' | 'transfer';
   specialRequests?: string;
   callbackUrl?: string;
+  captchaToken?: string;
+  honeypot?: string;
 }
 
 export interface BookingPackageDetail {
@@ -187,15 +189,8 @@ export async function validatePromo(code: string): Promise<{ valid: boolean; cod
     }
     return data;
   } catch {
-    // Graceful offline fallback
-    const upper = code.trim().toUpperCase();
-    if (upper === 'EARLYBIRD17' || upper === 'EARLYBIRD5' || upper === 'DETTY5') {
-      return { valid: true, code: upper, discountPct: 5 };
-    }
-    if (upper === 'VIPLAGOS') {
-      return { valid: true, code: upper, discountPct: 10 };
-    }
-    return { valid: false, error: 'Invalid or expired promo code.' };
+    // High-06: Do not leak promo codes or bypass verification offline
+    return { valid: false, error: 'Unable to verify promo code right now. Please check your internet connection and try again.' };
   }
 }
 
@@ -203,42 +198,32 @@ export async function validatePromo(code: string): Promise<{ valid: boolean; cod
  * Submit a booking to the Django backend PostgreSQL database.
  */
 export async function submitBooking(payload: BookingPayload): Promise<BookingResponse> {
-  try {
-    const res = await fetch(`${API_BASE}/bookings/`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload),
-    });
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}));
-      throw new Error(err.detail || 'Failed to submit booking');
-    }
-    return await res.json();
-  } catch (error) {
-    console.warn('Failed to submit booking to API, generating local reference:', error);
-    // Fallback generation so guest flow never crashes
-    const randomRef = `DL-2026-${Math.floor(1000 + Math.random() * 9000)}`;
-    return {
-      bookingRef: randomRef,
-      fullName: payload.fullName,
-      email: payload.email,
-      phone: payload.phone,
-      country: payload.country || 'UK',
-      guestCount: payload.guestCount,
-      isForeigner: payload.isForeigner,
-      selectedPackages: payload.selectedPackages,
-      subtotalNGN: 0,
-      groupDiscountNGN: 0,
-      promoDiscountNGN: 0,
-      finalTotalNGN: 0,
-      currency: payload.currency,
-      paymentMethod: payload.paymentMethod,
-      paymentStatus: 'pending',
-      createdAt: new Date().toISOString(),
-    };
+  const res = await fetch(`${API_BASE}/bookings/`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(payload),
+  }).catch((err) => {
+    console.warn('Network error reaching booking API:', err);
+    return null;
+  });
+
+  if (!res) {
+    throw new Error('Unable to connect to reservation servers. Please check your internet connection or try again shortly.');
   }
+
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    const msg = err.error || err.detail || (err.guestCount ? `Guests: ${err.guestCount[0]}` : null) || 'Failed to submit booking';
+    const errorObj = new Error(msg) as Error & { existingBookingRef?: string };
+    if (err.existingBookingRef) {
+      errorObj.existingBookingRef = err.existingBookingRef;
+    }
+    throw errorObj;
+  }
+
+  return await res.json();
 }
 
 export async function verifyPayment(params: {

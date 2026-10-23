@@ -1,6 +1,7 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Script from 'next/script';
 import { PACKAGES_DATA, Currency, formatPrice, calculateGroupDiscount, ExcursionPackage, ExchangeRates } from '@/data/packages';
 import { validatePromo, submitBooking } from '@/lib/api';
 import {
@@ -17,6 +18,26 @@ import {
   Info,
   Tag,
 } from 'lucide-react';
+
+declare global {
+  interface Window {
+    turnstile?: {
+      render: (
+        container: string | HTMLElement,
+        options: {
+          sitekey: string;
+          callback: (token: string) => void;
+          'error-callback'?: (err?: any) => void;
+          'expired-callback'?: () => void;
+          theme?: 'light' | 'dark' | 'auto';
+          size?: 'normal' | 'flexible' | 'compact';
+        }
+      ) => string;
+      reset: (widgetId?: string) => void;
+      remove: (widgetId?: string) => void;
+    };
+  }
+}
 
 interface BookingModalProps {
   isOpen: boolean;
@@ -57,6 +78,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'flutterwave' | 'whatsapp'>(
     currentCurrency === 'NGN' ? 'paystack' : 'flutterwave'
   );
+
+  // Security & Bot Defense (HIGH-02 & HIGH-03)
+  const [honeypot, setHoneypot] = useState<string>('');
+  const [turnstileToken, setTurnstileToken] = useState<string>('');
+  const [existingRef, setExistingRef] = useState<string>('');
+  const turnstileContainerRef = useRef<HTMLDivElement>(null);
+  const turnstileWidgetIdRef = useRef<string | null>(null);
 
   // Custom Validation State
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -242,6 +270,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       setTouched({});
       setSubmitAttempted(false);
       setSubmitError('');
+      setHoneypot('');
+      setTurnstileToken('');
+      setExistingRef('');
     } else if (!isInitializedRef.current) {
       isInitializedRef.current = true;
       if (selectedPackageId) {
@@ -282,6 +313,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setTouched({});
     setSubmitAttempted(false);
     setSubmitError('');
+    setHoneypot('');
+    setTurnstileToken('');
+    setExistingRef('');
     onClose();
   };
 
@@ -294,6 +328,68 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
+
+  // Turnstile CAPTCHA Mount & Lifecycle
+  const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
+  useEffect(() => {
+    if (!isOpen || step !== 'details') {
+      return;
+    }
+
+    let intervalId: NodeJS.Timeout | null = null;
+
+    const renderTurnstile = () => {
+      if (typeof window === 'undefined' || !window.turnstile || !turnstileContainerRef.current) {
+        return false;
+      }
+      if (turnstileWidgetIdRef.current) {
+        try {
+          window.turnstile.reset(turnstileWidgetIdRef.current);
+          return true;
+        } catch {
+          turnstileWidgetIdRef.current = null;
+        }
+      }
+      try {
+        turnstileWidgetIdRef.current = window.turnstile.render(turnstileContainerRef.current, {
+          sitekey: siteKey,
+          theme: 'light',
+          size: 'normal',
+          callback: (token: string) => {
+            setTurnstileToken(token);
+          },
+          'expired-callback': () => {
+            setTurnstileToken('');
+          },
+          'error-callback': () => {
+            console.warn('Turnstile challenge encountered an issue');
+          },
+        });
+        return true;
+      } catch (e) {
+        console.warn('Failed to render Turnstile widget:', e);
+        return false;
+      }
+    };
+
+    if (!renderTurnstile()) {
+      intervalId = setInterval(() => {
+        if (renderTurnstile()) {
+          if (intervalId) clearInterval(intervalId);
+        }
+      }, 250);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+      if (turnstileWidgetIdRef.current && typeof window !== 'undefined' && window.turnstile) {
+        try {
+          window.turnstile.remove(turnstileWidgetIdRef.current);
+        } catch {}
+        turnstileWidgetIdRef.current = null;
+      }
+    };
+  }, [isOpen, step, siteKey]);
 
   if (!isOpen) return null;
 
@@ -429,6 +525,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         paymentMethod,
         specialRequests,
         callbackUrl,
+        captchaToken: turnstileToken,
+        honeypot,
       });
 
       const ref = res.bookingRef;
@@ -443,12 +541,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         if (res.checkoutUrl) {
           if (typeof window !== 'undefined') {
             try {
+              // LOW-05: Store only reference and timestamp in sessionStorage, omitting sensitive PII
               sessionStorage.setItem('pending_checkout', JSON.stringify({
                 bookingRef: res.bookingRef,
-                fullName: res.fullName,
-                finalTotalNGN: res.finalTotalNGN,
-                currency: res.currency,
-                checkoutUrl: res.checkoutUrl,
                 timestamp: Date.now(),
               }));
             } catch {}
@@ -464,31 +559,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       }
 
       if (paymentMethod === 'whatsapp') {
-        const packagesList = selectedIds
-          .map((id) => packages.find((p) => p.id === id)?.name)
-          .filter(Boolean)
-          .join(', ');
-        const formattedTotal = formatPrice(res.finalTotalNGN || finalTotalNGN, currentCurrency, false, undefined, exchangeRates);
-        const formattedSubtotal = formatPrice(subtotalNGN, currentCurrency, false, undefined, exchangeRates);
-        const methodLabel = 'Book via WhatsApp';
-        const appliedDiscounts: string[] = [];
-        if (groupDiscountNGN > 0) {
-          appliedDiscounts.push(`Group Discount (5%): -${formatPrice(groupDiscountNGN, currentCurrency, false, undefined, exchangeRates)}`);
-        }
-        if (promoDiscountNGN > 0 && appliedPromo) {
-          appliedDiscounts.push(`Promo ${appliedPromo.code} (${appliedPromo.discountPct}% off): -${formatPrice(promoDiscountNGN, currentCurrency, false, undefined, exchangeRates)}`);
-        }
-        const discountsText = appliedDiscounts.length > 0 ? `%0A*Discounts Applied:* ${appliedDiscounts.join(', ')}` : '';
-        const priceSection = hasDiscount
-          ? `%0A*Initial Price:* ${formattedSubtotal}${discountsText}%0A*Final Total:* ${formattedTotal}%0A*Total Savings:* ${formatPrice(totalDiscountNGN, currentCurrency, false, undefined, exchangeRates)}`
-          : `%0A*Total Amount:* ${formattedTotal}`;
-        const message = `Hello Incel Holidays & Prospiz Team! I would like to book Detty December Lagos Luxe.%0A%0A*Booking ID:* ${ref}%0A*Name:* ${fullName}%0A*Email:* ${email}%0A*Phone:* ${phone}%0A*Country:* ${country}%0A*Guests:* ${guestCount}%0A*Selected Packages:* ${packagesList}${priceSection}%0A*Payment Method:* ${methodLabel}%0A*Special Requests:* ${specialRequests || 'None'}`;
+        // LOW-02: Minimal PII in WhatsApp deep link query parameter
+        const message = `Hello Incel Holidays & Prospiz Team! I have reserved seats via WhatsApp for Detty December Lagos Luxe.%0A%0A*Booking Reference:* ${ref}%0A%0APlease provide bank transfer details so I can complete my payment.`;
         window.open(`https://wa.me/2348123456789?text=${message}`, '_blank');
       }
 
       setStep('success');
     } catch (err: any) {
       setSubmitError(err.message || 'Error completing booking. Please try again.');
+      if (err.existingBookingRef) {
+        setExistingRef(err.existingBookingRef);
+      }
+      if (turnstileWidgetIdRef.current && typeof window !== 'undefined' && window.turnstile) {
+        try {
+          window.turnstile.reset(turnstileWidgetIdRef.current);
+          setTurnstileToken('');
+        } catch {}
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -578,6 +665,33 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         {/* Modal Content */}
         {step === 'details' ? (
           <form noValidate onSubmit={handleCompleteBooking} style={{ display: 'flex', flexDirection: 'column' }}>
+            {/* Security Honeypot: catches automated spam bots (hidden from human visitors) */}
+            <div
+              style={{
+                position: 'absolute',
+                left: '-9999px',
+                top: '-9999px',
+                width: '1px',
+                height: '1px',
+                overflow: 'hidden',
+                opacity: 0,
+                pointerEvents: 'none',
+              }}
+              aria-hidden="true"
+              tabIndex={-1}
+            >
+              <label htmlFor="booking_website_url">Website URL</label>
+              <input
+                id="booking_website_url"
+                type="text"
+                name="website_url"
+                value={honeypot}
+                onChange={(e) => setHoneypot(e.target.value)}
+                tabIndex={-1}
+                autoComplete="off"
+              />
+            </div>
+
             <div style={{ padding: '24px 24px', display: 'flex', flexDirection: 'column', gap: '22px' }}>
               {/* Step 1: Select Excursion / Package */}
               <div id="field-selectedIds">
@@ -728,21 +842,24 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     </span>
                     <button
                       type="button"
-                      onClick={() => setGuestCount(guestCount + 1)}
+                      disabled={guestCount >= 10}
+                      onClick={() => setGuestCount(Math.min(10, guestCount + 1))}
                       style={{
                         width: '40px',
                         height: '40px',
                         borderRadius: '8px',
                         background: '#ffffff',
                         border: '1px solid var(--border-light)',
-                        color: 'var(--text-heading)',
+                        color: guestCount >= 10 ? 'var(--text-muted)' : 'var(--text-heading)',
                         fontSize: '1.2rem',
                         fontWeight: 800,
-                        cursor: 'pointer',
+                        cursor: guestCount >= 10 ? 'not-allowed' : 'pointer',
+                        opacity: guestCount >= 10 ? 0.5 : 1,
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
                       }}
+                      title={guestCount >= 10 ? 'Maximum 10 guests per reservation' : 'Add guest'}
                     >
                       +
                     </button>
@@ -752,6 +869,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       </span>
                     )}
                   </div>
+                  {guestCount >= 10 && (
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', marginTop: '6px', fontWeight: 500 }}>
+                      Maximum 10 guests per online reservation. For larger groups or corporate bookings, please contact our VIP concierge.
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -901,6 +1023,28 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         <span>{errors.country}</span>
                       </div>
                     )}
+                  </div>
+
+                  {/* LOW-06: Special Requests / Dietary Requirements with 1,000 max length */}
+                  <div style={{ gridColumn: '1 / -1' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                      <label htmlFor="field-special-requests" style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-body)' }}>
+                        Special Requests / Dietary Requirements <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(Optional)</span>
+                      </label>
+                      <span style={{ fontSize: '0.72rem', color: specialRequests.length > 900 ? '#ea580c' : 'var(--text-muted)' }}>
+                        {specialRequests.length}/1000
+                      </span>
+                    </div>
+                    <textarea
+                      id="field-special-requests"
+                      value={specialRequests}
+                      onChange={(e) => setSpecialRequests(e.target.value.slice(0, 1000))}
+                      maxLength={1000}
+                      rows={2}
+                      placeholder="e.g. Vegetarian meals, VIP airport transfer pickup timing, accessibility needs..."
+                      className="input-custom"
+                      style={{ resize: 'vertical', minHeight: '60px', fontFamily: 'inherit', fontSize: '0.86rem' }}
+                    />
                   </div>
                 </div>
               </div>
@@ -1293,8 +1437,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     backgroundColor: '#fef2f2',
                     border: '1.5px solid #fecaca',
                     display: 'flex',
-                    alignItems: 'center',
-                    gap: '10px',
+                    flexDirection: 'column',
+                    gap: '6px',
                     color: '#991b1b',
                     fontSize: '0.86rem',
                     fontWeight: 600,
@@ -1302,8 +1446,25 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                   }}
                   role="alert"
                 >
-                  <AlertCircle size={18} style={{ color: '#ef4444', flexShrink: 0 }} />
-                  <span>{submitError}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                    <AlertCircle size={18} style={{ color: '#ef4444', flexShrink: 0 }} />
+                    <span>{submitError}</span>
+                  </div>
+                  {existingRef && (
+                    <div style={{ marginTop: '4px', paddingLeft: '28px' }}>
+                      <a
+                        href={`/booking/lookup?ref=${encodeURIComponent(existingRef)}`}
+                        style={{
+                          color: '#1d4ed8',
+                          fontWeight: 700,
+                          textDecoration: 'underline',
+                          fontSize: '0.84rem',
+                        }}
+                      >
+                        View or complete payment for existing reservation #{existingRef} &rarr;
+                      </a>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1429,6 +1590,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     <span>Gateway processing fee added at checkout</span>
                   </div>
                 )}
+              </div>
+
+              {/* Cloudflare Turnstile CAPTCHA container */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: '65px',
+                  margin: '4px 0 10px',
+                }}
+              >
+                <div id="cf-turnstile-booking-widget" ref={turnstileContainerRef} />
               </div>
 
               <button
@@ -1610,11 +1784,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
               <a
                 href={`https://wa.me/2348123456789?text=${encodeURIComponent(
-                  `Hello Team! My Booking ID is ${bookingId}. I have reserved ${guestCount} seats for Detty December Lagos Luxe.${
-                    hasDiscount
-                      ? `\nInitial Price: ${formatPrice(subtotalNGN, currentCurrency, false, undefined, exchangeRates)}\nTotal Saved: ${formatPrice(totalDiscountNGN, currentCurrency, false, undefined, exchangeRates)}\nFinal Total: ${formatPrice(finalTotalNGN, currentCurrency, false, undefined, exchangeRates)}`
-                      : `\nTotal: ${formatPrice(finalTotalNGN, currentCurrency, false, undefined, exchangeRates)}`
-                  }`
+                  `Hello Team! My Booking Reference is ${bookingId}. I would like to inquire about my reservation for Detty December Lagos Luxe.`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -1662,6 +1832,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           }
         }
       `}</style>
+      <Script
+        src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+        strategy="lazyOnload"
+      />
     </div>
   );
 };

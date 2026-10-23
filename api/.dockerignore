@@ -1,15 +1,33 @@
+# Virtual Environments & Packages
 venv/
 .venv/
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Environment Secrets
 .env
 .env.*
 !.env.example
+
+# Logs
 *.log
 server.log
+
+# Static & Media Build Artifacts
 staticfiles/
 media/
+
+# Test Artifacts & Coverage
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Version Control & IDE
 .git
 .gitignore
+.gemini/
+.idea/
+.vscode/
+.DS_Store

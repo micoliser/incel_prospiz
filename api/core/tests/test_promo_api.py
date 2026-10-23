@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.core.cache import cache
 from rest_framework.test import APIClient
 from rest_framework import status
 from core.models import PromoCode
@@ -7,6 +8,7 @@ from core.models import PromoCode
 class PromoCodeAPITest(TestCase):
     def setUp(self):
         self.client = APIClient()
+        cache.clear()
         self.active_promo = PromoCode.objects.create(
             code='EARLYBIRD5',
             discount_pct=5,
@@ -22,6 +24,9 @@ class PromoCodeAPITest(TestCase):
             discount_pct=50,
             is_active=False,
         )
+
+    def tearDown(self):
+        cache.clear()
 
     def test_validate_active_promo_success(self):
         res = self.client.post('/api/promo/validate/', {'code': 'EARLYBIRD5'}, format='json')

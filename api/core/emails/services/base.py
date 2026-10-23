@@ -1,6 +1,7 @@
 import logging
 import threading
 from typing import List, Dict, Any, Optional
+from django.db import connection
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 from django.utils.html import strip_tags
@@ -16,6 +17,18 @@ class BaseEmailService:
     """
 
     @staticmethod
+    def close_connection():
+        """
+        MEDIUM-06: Explicitly close Django database connections used or opened
+        in background daemon threads to prevent connection pool leaks and DatabaseError.
+        """
+        try:
+            from django.db import connection
+            connection.close()
+        except Exception:
+            pass
+
+    @staticmethod
     def send_email(
         subject: str,
         recipients: List[str],
@@ -27,17 +40,6 @@ class BaseEmailService:
         """
         Send an email. In async mode, uses a background daemon thread
         to prevent external SMTP latency from blocking user responses or webhooks.
-
-        Args:
-            subject: Email subject line
-            recipients: List of recipient email addresses
-            template_name: Template path (e.g. 'emails/customer_booking_confirmation.html')
-            context: Template context dictionary
-            reply_to: Optional reply-to address
-            is_async: If True, dispatches in background thread; if False, sends synchronously
-
-        Returns:
-            bool: True if queued or sent successfully, False otherwise
         """
         if not EmailConfig.is_enabled():
             logger.info("Email sending is disabled (EMAIL_ENABLED=False). Would have sent '%s' to %s", subject, recipients)
@@ -54,9 +56,14 @@ class BaseEmailService:
             return False
 
         if is_async:
+            def _async_worker():
+                try:
+                    BaseEmailService._send_sync(subject, clean_recipients, template_name, context, reply_to)
+                finally:
+                    BaseEmailService.close_connection()
+
             thread = threading.Thread(
-                target=BaseEmailService._send_sync,
-                args=(subject, clean_recipients, template_name, context, reply_to),
+                target=_async_worker,
                 daemon=True,
                 name=f"EmailThread-{clean_recipients[0]}"
             )

@@ -1,4 +1,5 @@
 from django.test import TestCase
+from django.core.cache import cache
 from rest_framework.test import APIClient
 from rest_framework import status
 from core.models import Package, Booking
@@ -7,6 +8,7 @@ from core.models import Package, Booking
 class BundleAndCapacityConcurrencyTest(TestCase):
     def setUp(self):
         self.client = APIClient()
+        cache.clear()
 
         # Create the 5 excursions
         self.abeokuta = Package.objects.create(
@@ -65,6 +67,9 @@ class BundleAndCapacityConcurrencyTest(TestCase):
             seats_booked=4,
             is_active=True,
         )
+
+    def tearDown(self):
+        cache.clear()
 
     def test_booking_bundle_increments_all_excursions(self):
         payload = {

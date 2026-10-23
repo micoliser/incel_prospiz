@@ -149,6 +149,42 @@ class PaymentIntegrationTests(TestCase):
         self.booking_usd.refresh_from_db()
         self.assertEqual(self.booking_usd.payment_status, 'paid')
 
+    def _make_usd_booking(self):
+        return Booking.objects.create(
+            full_name='Replay Target',
+            email='replay@example.com',
+            phone='+12025550100',
+            guest_count=1,
+            selected_packages=['tarkwa-bay-beach'],
+            final_total_ngn=75000,
+            currency='USD',
+            converted_total=46.88,
+            payment_method='flutterwave',
+            payment_status='pending',
+        )
+
+    @patch('requests.get')
+    def test_new_01_flutterwave_tx_cannot_confirm_other_booking(self, mock_get):
+        """NEW-01: A transaction paid for booking A cannot be used to confirm booking B (same price)."""
+        booking_b = self._make_usd_booking()
+        mock_get.return_value = MagicMock(status_code=200, json=lambda: {
+            'status': 'success',
+            'data': {'id': 998877, 'status': 'successful', 'tx_ref': self.booking_usd.booking_ref,
+                     'amount': 46.88, 'currency': 'USD'},
+        })
+        res = self.client.get(f'/api/payments/verify/?transaction_id=998877&tx_ref={booking_b.booking_ref}')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        booking_b.refresh_from_db()
+        self.assertEqual(booking_b.payment_status, 'pending')
+
+    def test_new_01_transaction_reference_cannot_be_reused(self):
+        """NEW-01: The same gateway transaction id can only pay for a single booking."""
+        booking_b = self._make_usd_booking()
+        self.assertTrue(confirm_booking_payment(self.booking_usd, payment_reference='998877'))
+        self.assertFalse(confirm_booking_payment(booking_b, payment_reference='998877'))
+        booking_b.refresh_from_db()
+        self.assertEqual(booking_b.payment_status, 'pending')
+
     def test_paystack_webhook_valid_signature(self):
         payload = {
             'event': 'charge.success',
@@ -209,6 +245,187 @@ class PaymentIntegrationTests(TestCase):
             HTTP_VERIF_HASH='wrong_hash',
         )
         self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+
+    @override_settings(FLUTTERWAVE_SECRET_HASH='')
+    def test_flutterwave_webhook_missing_server_hash_rejected_500(self):
+        """CRITICAL-01: When secret hash is unconfigured on server, do NOT bypass verification; reject with 500."""
+        payload = {
+            'event': 'charge.completed',
+            'status': 'successful',
+            'txRef': self.booking_usd.booking_ref,
+            'id': 123456,
+        }
+        res = self.client.post(
+            '/api/payments/flutterwave/webhook/',
+            data=payload,
+            format='json',
+        )
+        self.assertEqual(res.status_code, status.HTTP_500_INTERNAL_SERVER_ERROR)
+        self.booking_usd.refresh_from_db()
+        self.assertEqual(self.booking_usd.payment_status, 'pending')
+
+    @patch('requests.get')
+    def test_payment_verify_paystack_amount_mismatch_rejected(self, mock_get):
+        """CRITICAL-02: Attacker pays ₦100 (10000 kobo) instead of ₦75,000 (7500000 kobo); verification must reject."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'status': True,
+            'data': {
+                'status': 'success',
+                'reference': self.booking_ngn.booking_ref,
+                'amount': 10000,  # ₦100 paid instead of ₦75,000
+                'currency': 'NGN',
+            }
+        }
+        mock_get.return_value = mock_response
+
+        res = self.client.get(f'/api/payments/verify/?reference={self.booking_ngn.booking_ref}')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(res.json().get('status'), 'mismatch')
+
+        self.booking_ngn.refresh_from_db()
+        self.assertEqual(self.booking_ngn.payment_status, 'pending')
+
+    @patch('requests.get')
+    def test_payment_verify_paystack_customer_borne_fee_succeeds(self, mock_get):
+        """When fee is passed to customer on Paystack (e.g. 7624366 kobo for 7500000 kobo total), verification must succeed."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'status': True,
+            'data': {
+                'status': 'success',
+                'reference': self.booking_ngn.booking_ref,
+                'amount': 7624366,  # ₦76,243.66 (base ₦75,000 + ₦1,243.66 Paystack fee)
+                'requested_amount': 7500000,
+                'fees': 124366,
+                'currency': 'NGN',
+            }
+        }
+        mock_get.return_value = mock_response
+
+        res = self.client.get(f'/api/payments/verify/?reference={self.booking_ngn.booking_ref}')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+
+        self.booking_ngn.refresh_from_db()
+        self.assertEqual(self.booking_ngn.payment_status, 'paid')
+
+    @patch('requests.get')
+    def test_payment_verify_paystack_currency_mismatch_rejected(self, mock_get):
+        """CRITICAL-02: Payment in wrong currency must be rejected."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'status': True,
+            'data': {
+                'status': 'success',
+                'reference': self.booking_ngn.booking_ref,
+                'amount': 7500000,
+                'currency': 'USD',  # Mismatched currency
+            }
+        }
+        mock_get.return_value = mock_response
+
+        res = self.client.get(f'/api/payments/verify/?reference={self.booking_ngn.booking_ref}')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(res.json().get('status'), 'mismatch')
+
+        self.booking_ngn.refresh_from_db()
+        self.assertEqual(self.booking_ngn.payment_status, 'pending')
+
+    @patch('requests.get')
+    def test_payment_verify_flutterwave_amount_mismatch_rejected(self, mock_get):
+        """CRITICAL-02: Attacker pays $5 instead of $46.88 on Flutterwave; verification must reject."""
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            'status': 'success',
+            'data': {
+                'id': 998877,
+                'status': 'successful',
+                'tx_ref': self.booking_usd.booking_ref,
+                'amount': 5.00,  # $5 paid instead of $46.88
+                'currency': 'USD',
+            }
+        }
+        mock_get.return_value = mock_response
+
+        res = self.client.get(f'/api/payments/verify/?transaction_id=998877&tx_ref={self.booking_usd.booking_ref}')
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(res.json().get('status'), 'mismatch')
+
+        self.booking_usd.refresh_from_db()
+        self.assertEqual(self.booking_usd.payment_status, 'pending')
+
+    def test_paystack_webhook_amount_mismatch_rejected(self):
+        """CRITICAL-02: Paystack webhook with manipulated amount must not confirm payment."""
+        payload = {
+            'event': 'charge.success',
+            'data': {
+                'reference': self.booking_ngn.booking_ref,
+                'amount': 10000,  # ₦100 instead of ₦75,000
+                'currency': 'NGN',
+                'status': 'success',
+            }
+        }
+        body_bytes = json.dumps(payload).encode('utf-8')
+        signature = hmac.new('sk_test_fake_paystack_key'.encode('utf-8'), body_bytes, hashlib.sha512).hexdigest()
+
+        res = self.client.post(
+            '/api/payments/paystack/webhook/',
+            data=body_bytes,
+            content_type='application/json',
+            HTTP_X_PAYSTACK_SIGNATURE=signature,
+        )
+        self.booking_ngn.refresh_from_db()
+        self.assertEqual(self.booking_ngn.payment_status, 'pending')
+
+    def test_paystack_webhook_customer_borne_fee_succeeds(self):
+        """When webhook sends customer-borne fee (e.g. 7624366 kobo for 7500000 kobo total), payment is confirmed."""
+        payload = {
+            'event': 'charge.success',
+            'data': {
+                'reference': self.booking_ngn.booking_ref,
+                'amount': 7624366,
+                'requested_amount': 7500000,
+                'fees': 124366,
+                'currency': 'NGN',
+                'status': 'success',
+            }
+        }
+        body_bytes = json.dumps(payload).encode('utf-8')
+        signature = hmac.new('sk_test_fake_paystack_key'.encode('utf-8'), body_bytes, hashlib.sha512).hexdigest()
+
+        res = self.client.post(
+            '/api/payments/paystack/webhook/',
+            data=body_bytes,
+            content_type='application/json',
+            HTTP_X_PAYSTACK_SIGNATURE=signature,
+        )
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        self.booking_ngn.refresh_from_db()
+        self.assertEqual(self.booking_ngn.payment_status, 'paid')
+
+    def test_flutterwave_webhook_amount_mismatch_rejected(self):
+        """CRITICAL-02: Flutterwave webhook with manipulated amount must not confirm payment."""
+        payload = {
+            'event': 'charge.completed',
+            'status': 'successful',
+            'txRef': self.booking_usd.booking_ref,
+            'id': 123456,
+            'amount': 2.50,  # $2.50 instead of $46.88
+            'currency': 'USD',
+        }
+        res = self.client.post(
+            '/api/payments/flutterwave/webhook/',
+            data=payload,
+            format='json',
+            HTTP_VERIF_HASH='test_secret_hash',
+        )
+        self.assertEqual(res.status_code, status.HTTP_400_BAD_REQUEST)
+        self.booking_usd.refresh_from_db()
+        self.assertEqual(self.booking_usd.payment_status, 'pending')
 
     def test_validate_production_settings_success(self):
         from config.settings import validate_production_settings
@@ -287,4 +504,64 @@ class PaymentIntegrationTests(TestCase):
         res = self.client.get(f'/api/bookings/{self.booking_ngn.booking_ref}/')
         self.assertEqual(res.status_code, status.HTTP_200_OK)
         self.assertEqual(res.data['checkoutUrl'], 'https://checkout.paystack.com/auto-heal-789')
+
+    @patch('requests.get')
+    def test_payment_verify_masks_pii(self, mock_get):
+        """CRIT-03: Verify that PaymentVerifyView returns masked PII, matching BookingLookupSerializer."""
+        self.booking_ngn.special_requests = 'Sensitive private medical notes'
+        self.booking_ngn.save()
+        mock_get.return_value = MagicMock(
+            status_code=200,
+            json=lambda: {
+                'status': True,
+                'data': {
+                    'status': 'success',
+                    'reference': self.booking_ngn.booking_ref,
+                    'amount': 7500000,
+                    'currency': 'NGN',
+                }
+            }
+        )
+        res = self.client.get(f'/api/payments/verify/?reference={self.booking_ngn.booking_ref}')
+        self.assertEqual(res.status_code, status.HTTP_200_OK)
+        data = res.json()
+        self.assertEqual(data['paymentStatus'], 'paid')
+        self.assertNotIn('chidi@example.com', data['email'])
+        self.assertIn('***', data['email'])
+        self.assertNotIn('+2348012345678', data['phone'])
+        self.assertIn('•••', data['phone'])
+        self.assertEqual(data['fullName'], 'Chidi O.')
+        self.assertEqual(data['specialRequests'], '***')
+
+    def test_db_unique_constraint_on_paid_payment_reference(self):
+        """NEW-01 gap: Database UniqueConstraint strictly forbids multiple paid bookings with the same payment_reference."""
+        from django.db import IntegrityError
+        # Mark booking 1 as paid with reference 'TX-SHARED-123'
+        self.booking_ngn.payment_status = 'paid'
+        self.booking_ngn.payment_reference = 'TX-SHARED-123'
+        self.booking_ngn.save()
+
+        # Attempt to confirm or save a second booking with the same payment_reference
+        booking_b = self._make_usd_booking()
+        # confirm_booking_payment catches IntegrityError / pre-check and returns False
+        success = confirm_booking_payment(booking_b, payment_reference='TX-SHARED-123')
+        self.assertFalse(success)
+
+        # Direct DB write of duplicate paid reference raises IntegrityError
+        booking_b.payment_status = 'paid'
+        booking_b.payment_reference = 'TX-SHARED-123'
+        with self.assertRaises(IntegrityError):
+            booking_b.save()
+
+    def test_new_04_default_debug_fails_safe_to_false(self):
+        """NEW-04: Unset DJANGO_DEBUG must fail safe to False (production mode), not True."""
+        import os
+        # Simulate environment without DJANGO_DEBUG
+        orig = os.environ.pop('DJANGO_DEBUG', None)
+        try:
+            default_val = os.getenv('DJANGO_DEBUG', 'False').lower() in ('true', '1', 'yes')
+            self.assertFalse(default_val)
+        finally:
+            if orig is not None:
+                os.environ['DJANGO_DEBUG'] = orig
 

@@ -119,7 +119,7 @@ class CampaignConfigModelTest(TestCase):
         self.assertEqual(CampaignConfig.objects.count(), 1)
         self.assertEqual(cfg.early_bird_code, 'EARLYBIRD5')
         self.assertEqual(cfg.early_bird_cap, 20)
-        self.assertEqual(cfg.early_bird_baseline_claimed, 18)
+        self.assertEqual(cfg.early_bird_baseline_claimed, 0)
 
     def test_get_settings_returns_existing_record(self):
         cfg1 = CampaignConfig.get_settings()
