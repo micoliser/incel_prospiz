@@ -32,3 +32,8 @@ server.log
 node_modules/
 frontend/.next/
 frontend/node_modules/
+
+# Documents & Assets
+*.pdf
+Lag Luxe 2026 Terms and Conditions123.pdf
+

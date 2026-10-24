@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Currency, ExcursionPackage, PACKAGES_DATA } from '@/data/packages';
 import { getPackages, getCampaignStats, CampaignStats } from '@/lib/api';
 import { Navbar } from '@/components/Navbar';
@@ -22,6 +22,28 @@ export default function Home() {
   const [activePackageId, setActivePackageId] = useState<string | undefined>(undefined);
   const [packages, setPackages] = useState<ExcursionPackage[]>(PACKAGES_DATA);
   const [stats, setStats] = useState<CampaignStats | null>(null);
+  const [initialPromoCode, setInitialPromoCode] = useState<string | undefined>(undefined);
+
+  // Dynamic measurement for fixed header height so hero content is never cut off
+  const headerRef = useRef<HTMLDivElement>(null);
+  const [headerHeight, setHeaderHeight] = useState(105);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const updateHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+    updateHeight();
+    const observer = new ResizeObserver(updateHeight);
+    observer.observe(headerRef.current);
+    window.addEventListener('resize', updateHeight);
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', updateHeight);
+    };
+  }, []);
 
   const refreshAll = useCallback(async () => {
     try {
@@ -59,8 +81,6 @@ export default function Home() {
     };
   }, [refreshAll]);
 
-  const [initialPromoCode, setInitialPromoCode] = useState<string | undefined>(undefined);
-
   const handleOpenBooking = (packageId?: string, promoCodeToApply?: string) => {
     setActivePackageId(packageId);
     setInitialPromoCode(promoCodeToApply);
@@ -81,8 +101,20 @@ export default function Home() {
         onClaim={(code) => handleOpenBooking(undefined, code)}
       />
 
-      {/* Combined Sticky Header (Early Bird Bar + Navbar stick together on scroll) */}
-      <div style={{ position: 'sticky', top: 0, zIndex: 100 }}>
+      {/* Combined Fixed Header (Early Bird Bar + Navbar fixed together at the top on scroll) */}
+      <div
+        ref={headerRef}
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          width: '100%',
+          zIndex: 1000,
+          backgroundColor: '#ffffff',
+          boxShadow: '0 2px 12px rgba(1, 104, 167, 0.08)',
+        }}
+      >
         <UrgencyTicker stats={stats} />
         <Navbar
           currentCurrency={currency}
@@ -90,6 +122,9 @@ export default function Home() {
           onOpenBooking={() => handleOpenBooking()}
         />
       </div>
+
+      {/* Spacer so page content starts cleanly beneath the fixed header */}
+      <div style={{ height: `${headerHeight}px` }} aria-hidden="true" />
 
       {/* Main Content Area */}
       <main style={{ flexGrow: 1 }}>

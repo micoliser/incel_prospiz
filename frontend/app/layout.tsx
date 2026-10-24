@@ -23,6 +23,14 @@ export const metadata: Metadata = {
     description: "Come home, experience Lagos in December. Tours, food, wellness & VIP nights sorted.",
     images: [{ url: "/images/hero-lagos.jpg", width: 1200, height: 630 }],
   },
+  icons: {
+    icon: [
+      { url: "/tourism-favicon.png" },
+      { url: "/tourism-favicon.png", type: "image/png" },
+    ],
+    shortcut: "/tourism-favicon.png",
+    apple: "/tourism-favicon.png",
+  },
 };
 
 import { PendingCheckoutNotifier } from "@/components/PendingCheckoutNotifier";
@@ -35,6 +43,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
+        <link rel="icon" href="/tourism-favicon.png" type="image/png" />
+        <link rel="shortcut icon" href="/tourism-favicon.png" type="image/png" />
+        <link rel="apple-touch-icon" href="/tourism-favicon.png" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link

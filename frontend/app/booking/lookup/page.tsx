@@ -731,6 +731,28 @@ function BookingLookupContent() {
                           ? "Your reservation seats are temporarily reserved for offline booking. Please contact our tour agent on WhatsApp before this countdown reaches zero to provide payment proof and complete your reservation."
                           : "Your reservation seats are temporarily reserved. Please complete your payment before this countdown reaches zero, or this booking will be automatically cancelled and seats returned to public availability."}
                       </div>
+                      <div
+                        style={{
+                          fontSize: "0.76rem",
+                          color: "#92400e",
+                          marginTop: "6px",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "5px",
+                        }}
+                      >
+                        <ShieldCheck size={13} style={{ flexShrink: 0 }} />
+                        <span>
+                          Governed by the official{" "}
+                          <Link href="/terms" target="_blank" style={{ color: "#92400e", fontWeight: 700, textDecoration: "underline" }}>
+                            Terms &amp; Conditions
+                          </Link>{" "}
+                          and{" "}
+                          <Link href="/terms#sec-17" target="_blank" style={{ color: "#92400e", fontWeight: 700, textDecoration: "underline" }}>
+                            NDPA 2023 Privacy Policy
+                          </Link>.
+                        </span>
+                      </div>
                     </div>
                   </div>
 

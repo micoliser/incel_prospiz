@@ -179,10 +179,11 @@ export const Footer: React.FC = () => {
           <div>
             © 2026 Incel Holidays & Tourism Ltd × Prospiz Management Consulting Limited. All rights reserved.
           </div>
-          <div style={{ display: 'flex', gap: '20px' }}>
-            <a href="#faq" className="footer-link" style={{ color: '#94a3b8' }}>Security Protocol</a>
-            <a href="#faq" className="footer-link" style={{ color: '#94a3b8' }}>Payment Terms</a>
-            <a href="#faq" className="footer-link" style={{ color: '#94a3b8' }}>Cancellation Policy</a>
+          <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
+            <Link href="/terms" className="footer-link" style={{ color: '#94a3b8', textDecoration: 'none' }}>Terms &amp; Conditions</Link>
+            <Link href="/terms#sec-7" className="footer-link" style={{ color: '#94a3b8', textDecoration: 'none' }}>Cancellation &amp; Refund Policy</Link>
+            <Link href="/terms#sec-9" className="footer-link" style={{ color: '#94a3b8', textDecoration: 'none' }}>MOPOL Security Protocol</Link>
+            <Link href="/terms#sec-17" className="footer-link" style={{ color: '#94a3b8', textDecoration: 'none' }}>NDPA 2023 Privacy</Link>
           </div>
         </div>
       </div>

@@ -14,6 +14,10 @@ on:
         description: 'Public API URL baked into frontend build'
         required: false
         default: 'https://prospiz-api.inceltourism.com/api'
+      turnstile_site_key:
+        description: 'Cloudflare Turnstile site key baked into frontend build'
+        required: false
+        default: '0x4AAAAAAFgvcBiTXUVlV9rA'
 
 permissions:
   contents: read
@@ -99,6 +103,7 @@ jobs:
         working-directory: frontend
         env:
           NEXT_PUBLIC_API_URL: ${{ inputs.frontend_api_url || 'https://prospiz-api.inceltourism.com/api' }}
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: ${{ inputs.turnstile_site_key || '0x4AAAAAAFgvcBiTXUVlV9rA' }}
         run: npm run build
 
   build-and-push:
@@ -139,6 +144,7 @@ jobs:
           push: true
           build-args: |
             NEXT_PUBLIC_API_URL=${{ inputs.frontend_api_url || 'https://prospiz-api.inceltourism.com/api' }}
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=${{ inputs.turnstile_site_key || '0x4AAAAAAFgvcBiTXUVlV9rA' }}
           tags: |
             ghcr.io/${{ env.GHCR_OWNER }}/detty-luxe-frontend:${{ env.IMAGE_TAG }}
             ghcr.io/${{ env.GHCR_OWNER }}/detty-luxe-frontend:${{ env.LATEST_TAG }}

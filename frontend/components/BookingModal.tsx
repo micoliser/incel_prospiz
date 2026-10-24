@@ -17,6 +17,7 @@ import {
   Check,
   Info,
   Tag,
+  ExternalLink,
 } from 'lucide-react';
 
 declare global {
@@ -78,6 +79,11 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'flutterwave' | 'whatsapp'>(
     currentCurrency === 'NGN' ? 'paystack' : 'flutterwave'
   );
+
+  // Legal Agreement & Data Processing Consents
+  const [agreeTerms, setAgreeTerms] = useState<boolean>(false);
+  const [agreeDataProcessing, setAgreeDataProcessing] = useState<boolean>(false);
+  const [termsError, setTermsError] = useState<string>('');
 
   // Security & Bot Defense (HIGH-02 & HIGH-03)
   const [honeypot, setHoneypot] = useState<string>('');
@@ -316,6 +322,9 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setHoneypot('');
     setTurnstileToken('');
     setExistingRef('');
+    setAgreeTerms(false);
+    setAgreeDataProcessing(false);
+    setTermsError('');
     onClose();
   };
 
@@ -501,6 +510,16 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             (el as HTMLElement).focus();
           }
         }
+      }
+      return;
+    }
+
+    // Enforce mandatory Terms & Conditions and Data Processing consent
+    if (!agreeTerms || !agreeDataProcessing) {
+      setTermsError('You must agree to both the Terms & Conditions and the Data Processing Agreement to proceed with your booking.');
+      const el = document.getElementById('field-terms-agreement');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       }
       return;
     }
@@ -1428,6 +1447,142 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 )}
               </div>
 
+              {/* Mandatory Legal & Data Processing Consents */}
+              <div
+                id="field-terms-agreement"
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '10px',
+                }}
+              >
+
+                {/* Checkbox 1: Terms and Conditions */}
+                <label
+                  htmlFor="checkbox-agree-terms"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    backgroundColor: submitAttempted && !agreeTerms ? '#fef2f2' : '#ffffff',
+                    border: submitAttempted && !agreeTerms ? '1px solid #fca5a5' : '1px solid var(--border-light)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    id="checkbox-agree-terms"
+                    checked={agreeTerms}
+                    onChange={(e) => {
+                      setAgreeTerms(e.target.checked);
+                      if (termsError) setTermsError('');
+                    }}
+                    style={{
+                      marginTop: '3px',
+                      width: '18px',
+                      height: '18px',
+                      cursor: 'pointer',
+                      accentColor: 'var(--blue-deep)',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span style={{ fontSize: '0.83rem', color: 'var(--text-body)', lineHeight: 1.55 }}>
+                    I confirm that I am at least 18 years old and have read, understood, and accept the{' '}
+                    <a
+                      href="/terms"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--blue-deep)', fontWeight: 800, textDecoration: 'underline' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Terms and Conditions
+                    </a>{' '}
+                    governing the Detty December Lagos Luxe 2026 Programme, including excursion guidelines, and the binding{' '}
+                    <a
+                      href="/terms#sec-7"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--blue-deep)', fontWeight: 800, textDecoration: 'underline' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Cancellation &amp; Refund Schedule
+                    </a>.
+                  </span>
+                </label>
+
+                {/* Checkbox 2: Data Processing Consent */}
+                <label
+                  htmlFor="checkbox-agree-data-processing"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'flex-start',
+                    gap: '12px',
+                    cursor: 'pointer',
+                    userSelect: 'none',
+                    padding: '8px 10px',
+                    borderRadius: '8px',
+                    backgroundColor: submitAttempted && !agreeDataProcessing ? '#fef2f2' : '#ffffff',
+                    border: submitAttempted && !agreeDataProcessing ? '1px solid #fca5a5' : '1px solid var(--border-light)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  <input
+                    type="checkbox"
+                    id="checkbox-agree-data-processing"
+                    checked={agreeDataProcessing}
+                    onChange={(e) => {
+                      setAgreeDataProcessing(e.target.checked);
+                      if (termsError) setTermsError('');
+                    }}
+                    style={{
+                      marginTop: '3px',
+                      width: '18px',
+                      height: '18px',
+                      cursor: 'pointer',
+                      accentColor: 'var(--blue-deep)',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <span style={{ fontSize: '0.83rem', color: 'var(--text-body)', lineHeight: 1.55 }}>
+                    I formally consent to the collection, processing, and lawful transfer of my personal data by Incel Holidays &amp; Tourism Ltd and Prospiz Management Consulting Limited in strict compliance with the Nigeria Data Protection Act (NDPA) 2023 and the{' '}
+                    <a
+                      href="/terms#sec-17"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      style={{ color: 'var(--blue-deep)', fontWeight: 800, textDecoration: 'underline' }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      Data Privacy Policy
+                    </a>{' '}
+                    for booking fulfillment, safety and security coordination, emergency assistance, and tour communications.
+                  </span>
+                </label>
+
+                {termsError && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: '#b91c1c', fontSize: '0.82rem', fontWeight: 700, marginTop: '2px' }}>
+                    <AlertCircle size={15} style={{ flexShrink: 0, color: '#ef4444' }} />
+                    <span>{termsError}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Cloudflare Turnstile CAPTCHA container */}
+              <div
+                style={{
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  minHeight: '65px',
+                  margin: '4px 0 0',
+                }}
+              >
+                <div id="cf-turnstile-booking-widget" ref={turnstileContainerRef} />
+              </div>
+
               {/* Form Level Error Alerts */}
               {submitError && (
                 <div
@@ -1492,21 +1647,23 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             </div>
 
             {/* Sticky Mobile & Desktop Action Checkout Bar */}
-            <div style={{
-              padding: '16px 24px',
-              borderTop: '1px solid var(--border-light)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              flexWrap: 'wrap',
-              gap: '14px',
-              position: 'sticky',
-              bottom: 0,
-              backgroundColor: '#ffffff',
-              boxShadow: '0 -4px 16px rgba(0,0,0,0.06)',
-              zIndex: 10,
-            }}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+            <div
+              className="checkout-action-bar"
+              style={{
+                padding: '16px 24px',
+                borderTop: '1px solid var(--border-light)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: '16px',
+                position: 'sticky',
+                bottom: 0,
+                backgroundColor: '#ffffff',
+                boxShadow: '0 -4px 16px rgba(0,0,0,0.06)',
+                zIndex: 10,
+              }}
+            >
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '3px', flex: '1 1 auto', minWidth: '220px' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                   <span style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
                     Total for {guestCount} {guestCount === 1 ? 'Guest' : 'Guests'}:
@@ -1584,6 +1741,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       display: 'inline-flex',
                       alignItems: 'center',
                       gap: '5px',
+                      width: 'fit-content',
                     }}
                   >
                     <AlertCircle size={12} style={{ color: '#d97706', flexShrink: 0 }} />
@@ -1592,40 +1750,42 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 )}
               </div>
 
-              {/* Cloudflare Turnstile CAPTCHA container */}
-              <div
-                style={{
-                  display: 'flex',
-                  justifyContent: 'center',
-                  alignItems: 'center',
-                  minHeight: '65px',
-                  margin: '4px 0 10px',
-                }}
-              >
-                <div id="cf-turnstile-booking-widget" ref={turnstileContainerRef} />
+              <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+                <button
+                  type="submit"
+                  disabled={isSubmitting || !agreeTerms || !agreeDataProcessing}
+                  className="btn-primary"
+                  style={{
+                    padding: '15px 32px',
+                    fontSize: '0.98rem',
+                    opacity: (isSubmitting || !agreeTerms || !agreeDataProcessing) ? 0.55 : 1,
+                    cursor: (!agreeTerms || !agreeDataProcessing) ? 'not-allowed' : 'pointer',
+                    filter: (!agreeTerms || !agreeDataProcessing) ? 'grayscale(0.3)' : 'none',
+                    transition: 'all 0.25s ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title={
+                    !agreeTerms || !agreeDataProcessing
+                      ? 'Please check both required consent checkboxes above to proceed'
+                      : undefined
+                  }
+                >
+                  <span>
+                    {isSubmitting
+                      ? paymentMethod === 'paystack'
+                        ? 'Redirecting to Paystack...'
+                        : paymentMethod === 'flutterwave'
+                          ? 'Redirecting to Flutterwave...'
+                          : 'Connecting to WhatsApp...'
+                      : paymentMethod === 'paystack'
+                        ? 'Pay with Paystack'
+                        : paymentMethod === 'flutterwave'
+                          ? 'Pay with Flutterwave'
+                          : 'Book via WhatsApp'}
+                  </span>
+                  <ArrowRight size={18} />
+                </button>
               </div>
-
-              <button
-                type="submit"
-                disabled={isSubmitting}
-                className="btn-primary"
-                style={{ padding: '15px 32px', fontSize: '0.98rem', opacity: isSubmitting ? 0.75 : 1 }}
-              >
-                <span>
-                  {isSubmitting
-                    ? paymentMethod === 'paystack'
-                      ? 'Redirecting to Paystack...'
-                      : paymentMethod === 'flutterwave'
-                        ? 'Redirecting to Flutterwave...'
-                        : 'Connecting to WhatsApp...'
-                    : paymentMethod === 'paystack'
-                      ? 'Pay with Paystack'
-                      : paymentMethod === 'flutterwave'
-                        ? 'Pay with Flutterwave'
-                        : 'Book via WhatsApp'}
-                </span>
-                <ArrowRight size={18} />
-              </button>
             </div>
           </form>
         ) : (
@@ -1829,6 +1989,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
           }
           .mobile-drag-handle {
             display: block !important;
+          }
+          .checkout-action-bar {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 14px !important;
+          }
+          .checkout-action-bar button {
+            width: 100% !important;
+            justify-content: center !important;
           }
         }
       `}</style>
