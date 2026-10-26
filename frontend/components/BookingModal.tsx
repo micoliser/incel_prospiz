@@ -443,7 +443,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return sum + price * guestCount;
   }, 0);
 
-  // Group discount (5% for 4+ guests)
+  // Group discount (2% for 4+ guests)
   const groupDiscountNGN = calculateGroupDiscount(subtotalNGN, guestCount);
 
   // Promo code discount
@@ -465,7 +465,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       if (res.valid && res.discountPct) {
         setAppliedPromo({ code: res.code || promoCode.trim().toUpperCase(), discountPct: res.discountPct });
       } else {
-        setPromoError(res.error || `Invalid promo code. Try "${earlyBirdCode || 'EARLYBIRD17'}" for 5% off!`);
+        setPromoError(res.error || `Invalid promo code. Try "${earlyBirdCode || 'EARLYBIRD17'}" for 2% off!`);
       }
     } finally {
       setIsCheckingPromo(false);
@@ -579,7 +579,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
 
       if (paymentMethod === 'whatsapp') {
         // LOW-02: Minimal PII in WhatsApp deep link query parameter
-        const message = `Hello Incel Holidays & Prospiz Team! I have reserved seats via WhatsApp for Detty December Lagos Luxe.%0A%0A*Booking Reference:* ${ref}%0A%0APlease provide bank transfer details so I can complete my payment.`;
+        const message = `Hello Incel Holidays & Prospiz Team! I have reserved seats via WhatsApp for Lagos Luxe 2026.%0A%0A*Booking Reference:* ${ref}%0A%0APlease provide bank transfer details so I can complete my payment.`;
         window.open(`https://wa.me/2348123456789?text=${message}`, '_blank');
       }
 
@@ -656,7 +656,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               Incel Holidays × Prospiz Experience
             </div>
             <h3 style={{ fontSize: '1.35rem', color: 'var(--text-heading)', marginTop: '2px' }}>
-              {step === 'details' ? 'Reserve Your Detty December Seats' : 'Booking Confirmation'}
+              {step === 'details' ? 'Reserve Your Lagos Luxe 2026 Seats' : 'Booking Confirmation'}
             </h3>
           </div>
 
@@ -884,7 +884,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     </button>
                     {guestCount >= 4 && (
                       <span className="badge-green" style={{ fontSize: '0.74rem' }}>
-                        5% Group Discount
+                        2% Group Discount
                       </span>
                     )}
                   </div>
@@ -1230,7 +1230,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '0.86rem', color: '#059669' }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                         <span style={{ backgroundColor: '#d1fae5', color: '#065f46', fontSize: '0.68rem', fontWeight: 800, padding: '2px 6px', borderRadius: '4px' }}>
-                          5% OFF
+                          2% OFF
                         </span>
                         <span>Group Discount (4+ guests):</span>
                       </span>
@@ -1501,7 +1501,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     >
                       Terms and Conditions
                     </a>{' '}
-                    governing the Detty December Lagos Luxe 2026 Programme, including excursion guidelines, and the binding{' '}
+                    governing the Lagos Luxe 2026 Programme, including excursion guidelines, and the binding{' '}
                     <a
                       href="/terms#sec-7"
                       target="_blank"
@@ -1716,7 +1716,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     {groupDiscountNGN > 0 && (
                       <div style={{ fontSize: '0.74rem', color: '#059669', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '4px' }}>
                         <CheckCircle2 size={12} style={{ color: '#059669', flexShrink: 0 }} />
-                        <span>5% Group Discount (4+ guests): -{formatPrice(groupDiscountNGN, currentCurrency, false, undefined, exchangeRates)}</span>
+                        <span>2% Group Discount (4+ guests): -{formatPrice(groupDiscountNGN, currentCurrency, false, undefined, exchangeRates)}</span>
                       </div>
                     )}
                     {promoDiscountNGN > 0 && appliedPromo && (
@@ -1892,7 +1892,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
               )}
               {groupDiscountNGN > 0 && (
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.88rem', color: '#059669' }}>
-                  <span>Group Discount (5%):</span>
+                  <span>Group Discount (2%):</span>
                   <span style={{ fontWeight: 700 }}>
                     -{formatPrice(groupDiscountNGN, currentCurrency, false, undefined, exchangeRates)}
                   </span>
@@ -1944,7 +1944,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap', justifyContent: 'center', width: '100%' }}>
               <a
                 href={`https://wa.me/2348123456789?text=${encodeURIComponent(
-                  `Hello Team! My Booking Reference is ${bookingId}. I would like to inquire about my reservation for Detty December Lagos Luxe.`
+                  `Hello Team! My Booking Reference is ${bookingId}. I would like to inquire about my reservation for Lagos Luxe 2026.`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"

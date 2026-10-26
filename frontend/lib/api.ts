@@ -100,7 +100,7 @@ export interface CampaignStats {
 export const DEFAULT_CAMPAIGN_STATS: CampaignStats = {
   earlyBird: {
     code: 'EARLYBIRD17',
-    discountPct: 5,
+    discountPct: 2,
     totalCap: 20,
     claimed: 10,
     remaining: 10,

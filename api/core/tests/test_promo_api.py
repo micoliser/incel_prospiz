@@ -11,7 +11,7 @@ class PromoCodeAPITest(TestCase):
         cache.clear()
         self.active_promo = PromoCode.objects.create(
             code='EARLYBIRD5',
-            discount_pct=5,
+            discount_pct=2,
             is_active=True,
         )
         self.vip_promo = PromoCode.objects.create(
@@ -34,7 +34,7 @@ class PromoCodeAPITest(TestCase):
         data = res.json()
         self.assertTrue(data['valid'])
         self.assertEqual(data['code'], 'EARLYBIRD5')
-        self.assertEqual(data['discountPct'], 5)
+        self.assertEqual(data['discountPct'], 2)
         self.assertEqual(data['id'], str(self.active_promo.id))
 
     def test_validate_promo_case_insensitive(self):

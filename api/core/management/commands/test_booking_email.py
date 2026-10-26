@@ -53,7 +53,7 @@ class Command(BaseCommand):
         is_sync = options.get('sync')
 
         self.stdout.write(self.style.MIGRATE_HEADING("=" * 65))
-        self.stdout.write(self.style.MIGRATE_HEADING("📧 DETTY DECEMBER LAGOS LUXE - EMAIL SYSTEM TEST"))
+        self.stdout.write(self.style.MIGRATE_HEADING("📧 LAGOS LUXE 2026 - EMAIL SYSTEM TEST"))
         self.stdout.write(self.style.MIGRATE_HEADING("=" * 65))
 
         self.stdout.write(f"Email Backend:  {getattr(settings, 'EMAIL_BACKEND', 'Not configured')}")

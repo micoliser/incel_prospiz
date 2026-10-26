@@ -137,9 +137,9 @@ Validates voucher codes (`EARLYBIRD5`, `DETTY5`, `VIPLAGOS`) against date validi
 {
   "valid": true,
   "code": "EARLYBIRD5",
-  "discount_percentage": "5.00",
-  "discount_amount": 7500.00,
-  "final_total": 142500.00
+  "discount_percentage": "2.00",
+  "discount_amount": 3000.00,
+  "final_total": 147000.00
 }
 ```
 

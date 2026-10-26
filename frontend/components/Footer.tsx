@@ -56,7 +56,7 @@ export const Footer: React.FC = () => {
             </div>
 
             <p style={{ fontSize: '0.88rem', lineHeight: 1.6, color: '#94a3b8', marginBottom: '16px' }}>
-              <strong style={{ color: '#ffffff' }}>Detty December Lagos Luxe 2026</strong> is an exclusive joint travel & culture initiative
+              <strong style={{ color: '#ffffff' }}>Lagos Luxe 2026</strong> is an exclusive joint travel & culture initiative
               co-hosted by Incel Holidays & Tourism Ltd and Prospiz Management Consulting Limited.
             </p>
 
@@ -152,7 +152,7 @@ export const Footer: React.FC = () => {
               Have questions about foreign currency payments, airport pickups, or group reservations? Chat directly with our host team.
             </p>
             <a
-              href="https://wa.me/2348123456789?text=Hello%20Incel%20%26%20Prospiz%20Team!%20I%20have%20an%20inquiry%20regarding%20Detty%20December%20Lagos%20Luxe."
+              href="https://wa.me/2348123456789?text=Hello%20Incel%20%26%20Prospiz%20Team!%20I%20have%20an%20inquiry%20regarding%20Lagos%20Luxe%202026."
               target="_blank"
               rel="noopener noreferrer"
               className="btn-whatsapp"

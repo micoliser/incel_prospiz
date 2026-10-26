@@ -19,7 +19,7 @@ class CampaignStatsAPITest(TestCase):
         CampaignConfig.objects.all().delete()
         self.cfg = CampaignConfig.objects.create(
             early_bird_code='EARLYBIRD5',
-            early_bird_discount_pct=5,
+            early_bird_discount_pct=2,
             early_bird_cap=20,
             early_bird_baseline_claimed=18,
             early_bird_deadline=self.future_deadline,
@@ -63,7 +63,7 @@ class CampaignStatsAPITest(TestCase):
         # Early bird checks
         eb = data['earlyBird']
         self.assertEqual(eb['code'], 'EARLYBIRD5')
-        self.assertEqual(eb['discountPct'], 5)
+        self.assertEqual(eb['discountPct'], 2)
         self.assertEqual(eb['totalCap'], 20)
         self.assertEqual(eb['claimed'], 18)
         self.assertEqual(eb['remaining'], 2)

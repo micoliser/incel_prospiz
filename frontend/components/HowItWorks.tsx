@@ -32,7 +32,7 @@ export const HowItWorks: React.FC<{ onBookNow: () => void }> = ({ onBookNow }) =
       icon: PartyPopper,
       title: 'Arrive in Lagos & Enjoy',
       description:
-        'Step off the plane into air-conditioned transport with MOPOL security escort. Live the most unforgettable Detty December of your life.',
+        'Step off the plane into air-conditioned transport with MOPOL security escort. Live the most unforgettable Lagos Luxe 2026 experience of your life.',
     },
   ];
 

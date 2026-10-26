@@ -46,7 +46,7 @@ class BookingCreationAPITest(TestCase):
 
         self.promo_5 = PromoCode.objects.create(
             code='EARLYBIRD5',
-            discount_pct=5,
+            discount_pct=2,
             is_active=True,
         )
 
@@ -170,7 +170,7 @@ class BookingCreationAPITest(TestCase):
         self.assertEqual(res3.json()['groupDiscountNGN'], 0)
         self.assertEqual(res3.json()['finalTotalNGN'], 225000)
 
-        # 4 guests: 5% group discount applied
+        # 4 guests: 2% group discount applied
         payload_4 = {
             'fullName': 'Group of Four',
             'email': 'group4@example.com',
@@ -180,13 +180,13 @@ class BookingCreationAPITest(TestCase):
         }
         res4 = self.client.post('/api/bookings/', data=payload_4, format='json')
         subtotal_4 = 4 * 75000  # 300,000
-        discount_4 = round(subtotal_4 * 0.05)  # 15,000
+        discount_4 = round(subtotal_4 * 0.02)  # 6,000
         self.assertEqual(res4.json()['subtotalNGN'], 300000)
-        self.assertEqual(res4.json()['groupDiscountPct'], 5)
+        self.assertEqual(res4.json()['groupDiscountPct'], 2)
         self.assertEqual(res4.json()['groupDiscountNGN'], discount_4)
         self.assertEqual(res4.json()['finalTotalNGN'], subtotal_4 - discount_4)
 
-        # 8 guests: 5% group discount applied
+        # 8 guests: 2% group discount applied
         payload_8 = {
             'fullName': 'Group of Eight',
             'email': 'group8@example.com',
@@ -196,13 +196,15 @@ class BookingCreationAPITest(TestCase):
         }
         res8 = self.client.post('/api/bookings/', data=payload_8, format='json')
         subtotal_8 = 8 * 75000  # 600,000
-        discount_8 = round(subtotal_8 * 0.05)  # 30,000
-        self.assertEqual(res8.json()['groupDiscountPct'], 5)
+        discount_8 = round(subtotal_8 * 0.02)  # 12,000
+        self.assertEqual(res8.json()['groupDiscountPct'], 2)
         self.assertEqual(res8.json()['groupDiscountNGN'], discount_8)
         self.assertEqual(res8.json()['finalTotalNGN'], subtotal_8 - discount_8)
 
     def test_stacked_group_and_promo_discount_audit_trail(self):
-        # 4 guests (5% group) + EARLYBIRD5 (5% promo)
+        # 4 guests (2% group) + EARLYBIRD5 (2% promo)
+        self.promo_5.discount_pct = 2
+        self.promo_5.save()
         payload = {
             'fullName': 'Audit Test Group',
             'email': 'audit@example.com',
@@ -217,27 +219,27 @@ class BookingCreationAPITest(TestCase):
 
         # Math breakdown:
         # Subtotal: 4 * 75,000 = 300,000
-        # Group discount (5%): 15,000
-        # Remainder: 285,000
-        # Promo discount (5% of 285,000): 14,250
-        # Final Total: 300,000 - 15,000 - 14,250 = 270,750
+        # Group discount (2%): 6,000
+        # Remainder: 294,000
+        # Promo discount (2% of 294,000): 5,880
+        # Final Total: 300,000 - 6,000 - 5,880 = 288,120
         self.assertEqual(data['subtotalNGN'], 300000)
-        self.assertEqual(data['groupDiscountPct'], 5)
-        self.assertEqual(data['groupDiscountNGN'], 15000)
+        self.assertEqual(data['groupDiscountPct'], 2)
+        self.assertEqual(data['groupDiscountNGN'], 6000)
         self.assertEqual(data['promoCode'], 'EARLYBIRD5')
-        self.assertEqual(data['promoDiscountPct'], 5)
-        self.assertEqual(data['promoDiscountNGN'], 14250)
-        self.assertEqual(data['finalTotalNGN'], 270750)
+        self.assertEqual(data['promoDiscountPct'], 2)
+        self.assertEqual(data['promoDiscountNGN'], 5880)
+        self.assertEqual(data['finalTotalNGN'], 288120)
 
         # Confirm persisted record in DB
         booking = Booking.objects.get(booking_ref=data['bookingRef'])
         self.assertEqual(booking.subtotal_ngn, 300000)
-        self.assertEqual(booking.group_discount_pct, 5)
-        self.assertEqual(booking.group_discount_ngn, 15000)
+        self.assertEqual(booking.group_discount_pct, 2)
+        self.assertEqual(booking.group_discount_ngn, 6000)
         self.assertEqual(booking.promo_code, 'EARLYBIRD5')
-        self.assertEqual(booking.promo_discount_pct, 5)
-        self.assertEqual(booking.promo_discount_ngn, 14250)
-        self.assertEqual(booking.final_total_ngn, 270750)
+        self.assertEqual(booking.promo_discount_pct, 2)
+        self.assertEqual(booking.promo_discount_ngn, 5880)
+        self.assertEqual(booking.final_total_ngn, 288120)
 
     def test_booking_with_uuid_package_identifier(self):
         pkg_uuid = str(self.abeokuta.id)

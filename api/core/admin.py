@@ -4,7 +4,7 @@ from .models import Package, PromoCode, Booking, CampaignConfig
 
 @admin.register(Package)
 class PackageAdmin(admin.ModelAdmin):
-    list_display = ('id', 'slug', 'name', 'category', 'price_ngn', 'seats_booked', 'max_seats', 'is_active')
+    list_display = ('id', 'slug', 'name', 'category', 'price_ngn', 'price_foreigner_ngn', 'seats_booked', 'max_seats', 'is_active')
     list_filter = ('category', 'is_active')
     search_fields = ('id', 'slug', 'name', 'description')
 
@@ -56,7 +56,7 @@ class BookingAdmin(admin.ModelAdmin):
             'fields': ('selected_packages',)
         }),
         ('Financial Audit & Discount Breakdown', {
-            'description': 'Itemized pricing breakdown: Base subtotal, 5% group discount (for 4+ guests), promo coupon discount, and final total.',
+            'description': 'Itemized pricing breakdown: Base subtotal, 2% group discount (for 4+ guests), promo coupon discount, and final total.',
             'fields': (
                 'subtotal_ngn',
                 ('group_discount_pct', 'group_discount_ngn'),

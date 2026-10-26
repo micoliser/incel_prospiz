@@ -18,12 +18,12 @@ class BookingRetrievalAPITest(TestCase):
             is_foreigner=False,
             selected_packages=['abeokuta-heritage'],
             subtotal_ngn=300000,
-            group_discount_pct=5,
-            group_discount_ngn=15000,
+            group_discount_pct=2,
+            group_discount_ngn=6000,
             promo_code='EARLYBIRD5',
-            promo_discount_pct=5,
-            promo_discount_ngn=14250,
-            final_total_ngn=270750,
+            promo_discount_pct=2,
+            promo_discount_ngn=5880,
+            final_total_ngn=288120,
             currency='NGN',
             payment_method='card',
             payment_status='pending',
@@ -48,12 +48,12 @@ class BookingRetrievalAPITest(TestCase):
         self.assertFalse(data['isForeigner'])
         self.assertEqual(data['selectedPackages'], ['abeokuta-heritage'])
         self.assertEqual(data['subtotalNGN'], 300000)
-        self.assertEqual(data['groupDiscountPct'], 5)
-        self.assertEqual(data['groupDiscountNGN'], 15000)
+        self.assertEqual(data['groupDiscountPct'], 2)
+        self.assertEqual(data['groupDiscountNGN'], 6000)
         self.assertEqual(data['promoCode'], 'EARLYBIRD5')
-        self.assertEqual(data['promoDiscountPct'], 5)
-        self.assertEqual(data['promoDiscountNGN'], 14250)
-        self.assertEqual(data['finalTotalNGN'], 270750)
+        self.assertEqual(data['promoDiscountPct'], 2)
+        self.assertEqual(data['promoDiscountNGN'], 5880)
+        self.assertEqual(data['finalTotalNGN'], 288120)
         self.assertEqual(data['paymentMethod'], 'card')
         self.assertEqual(data['paymentStatus'], 'pending')
         self.assertEqual(data['specialRequests'], '***')

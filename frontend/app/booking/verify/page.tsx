@@ -310,7 +310,7 @@ function VerifyPaymentContent() {
             href={`https://wa.me/2348123456789?text=${encodeURIComponent(
               displayRef
                 ? `Hello Team! My payment for booking reference ${displayRef} was cancelled or interrupted. I would like assistance completing my reservation.`
-                : `Hello Team! I experienced an issue with my checkout for Detty December Lagos Luxe.`
+                : `Hello Team! I experienced an issue with my checkout for Lagos Luxe 2026.`
             )}`}
             target="_blank"
             rel="noopener noreferrer"
@@ -361,7 +361,7 @@ function VerifyPaymentContent() {
             <span>Back to Home</span>
           </Link>
           <a
-            href="https://wa.me/2348123456789?text=Hello%20Team!%20I%20just%20completed%20payment%20for%20Detty%20December%20Lagos%20Luxe%20and%20would%20like%20to%20confirm%20my%20status."
+            href="https://wa.me/2348123456789?text=Hello%20Team!%20I%20just%20completed%20payment%20for%20Lagos%20Luxe%202026%20and%20would%20like%20to%20confirm%20my%20status."
             target="_blank"
             rel="noopener noreferrer"
             className="btn-whatsapp"
@@ -406,7 +406,7 @@ function VerifyPaymentContent() {
     : `₦${Number(booking.finalTotalNGN || 0).toLocaleString()}`;
 
   // LOW-02: Clean, reference-only WhatsApp message without cleartext PII, financial totals, or email/phone
-  const whatsappMsg = `Hello Incel Holidays & Prospiz Team! I have completed payment for Detty December Lagos Luxe.%0A%0A*Booking Reference:* ${booking.bookingRef}%0A*Status:* ${booking.paymentStatus.toUpperCase()}`;
+  const whatsappMsg = `Hello Incel Holidays & Prospiz Team! I have completed payment for Lagos Luxe 2026.%0A%0A*Booking Reference:* ${booking.bookingRef}%0A*Status:* ${booking.paymentStatus.toUpperCase()}`;
 
   return (
     <div style={{ minHeight: '85vh', padding: '48px 16px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

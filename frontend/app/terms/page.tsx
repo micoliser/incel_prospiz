@@ -14,6 +14,8 @@ import {
   Sparkles,
 } from "lucide-react";
 import { Footer } from "@/components/Footer";
+import { ExcursionPackage, PACKAGES_DATA } from "@/data/packages";
+import { getPackages } from "@/lib/api";
 
 interface Section {
   id: string;
@@ -31,6 +33,50 @@ export default function TermsAndConditionsPage() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const headerRef = useRef<HTMLElement>(null);
   const [headerHeight, setHeaderHeight] = useState(69);
+  const [packages, setPackages] = useState<ExcursionPackage[]>(PACKAGES_DATA);
+  const [loadingPackages, setLoadingPackages] = useState(true);
+
+  // Fetch live package pricing from database and auto-refresh on window focus
+  useEffect(() => {
+    let isMounted = true;
+    const fetchLatestPackages = () => {
+      getPackages()
+        .then((data) => {
+          if (isMounted && data && data.length > 0) {
+            setPackages(data);
+            setLoadingPackages(false);
+          }
+        })
+        .catch((err) => {
+          console.warn(
+            "Failed to load package prices from database for Terms & Conditions:",
+            err,
+          );
+          if (isMounted) setLoadingPackages(false);
+        });
+    };
+
+    fetchLatestPackages();
+
+    if (typeof window !== "undefined") {
+      window.addEventListener("focus", fetchLatestPackages);
+      return () => {
+        isMounted = false;
+        window.removeEventListener("focus", fetchLatestPackages);
+      };
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const sortedPackages = useMemo(() => {
+    return [...packages].sort((a, b) => {
+      if (a.category === "bundle" && b.category !== "bundle") return 1;
+      if (a.category !== "bundle" && b.category === "bundle") return -1;
+      return 0;
+    });
+  }, [packages]);
 
   // Measure fixed header height dynamically
   useEffect(() => {
@@ -137,7 +183,7 @@ export default function TermsAndConditionsPage() {
           <div className="clause-flow">
             <p>
               <strong>1.1</strong> These Terms and Conditions govern all
-              bookings and participation in Lag Luxe 2026, the Programme, a
+              bookings and participation in Lagos Luxe 2026, the Programme, a
               joint travel and culture initiative run between 15 and 21 December
               2026 by Incel Holidays &amp; Tourism Ltd RC 2007085 of 4th Floor,
               Right Wing, Mulliner Towers, Plot 39, Alfred Rewane Road, Ikoyi,
@@ -225,52 +271,32 @@ export default function TermsAndConditionsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  <tr>
-                    <td>
-                      Abeokuta Heritage &amp; Scenic Rail Excursion
-                    </td>
-                    <td>Full day, 8:00 AM to 6:00 PM</td>
-                    <td className="price-cell">₦559,833</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      Badagry Slave Route &amp; Coastal Heritage Tour
-                    </td>
-                    <td>Full day, 7:30 AM to 5:30 PM</td>
-                    <td className="price-cell">
-                      ₦580,167 (Nigerian Resident) / ₦600,167 (International
-                      Visitor)
-                    </td>
-                  </tr>
-                  <tr>
-                    <td>
-                      Tarkwa Bay Luxury Beach Cruise &amp; Cabana Day
-                    </td>
-                    <td>11:00 AM to 7:00 PM</td>
-                    <td className="price-cell">₦570,167</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      Kalakuta Afrobeat Shrine &amp; Fela Kuti Heritage
-                    </td>
-                    <td>1:00 PM to 8:00 PM</td>
-                    <td className="price-cell">₦508,167</td>
-                  </tr>
-                  <tr>
-                    <td>
-                      Lekki Conservation Centre &amp; Canopy Walkway
-                    </td>
-                    <td>9:00 AM to 2:00 PM</td>
-                    <td className="price-cell">₦578,333</td>
-                  </tr>
-                  <tr className="vip-row">
-                    <td>
-                      The Ultimate &ldquo;Lagos Luxe&rdquo; 7-Day All-Access
-                      Pass
-                    </td>
-                    <td>7 days</td>
-                    <td className="price-cell vip-price">₦974,119</td>
-                  </tr>
+                  {sortedPackages.map((pkg) => {
+                    const isVip = pkg.category === "bundle";
+                    const hasForeignerPrice =
+                      pkg.priceForeignerNGN &&
+                      pkg.priceForeignerNGN !== pkg.priceNGN;
+
+                    return (
+                      <tr
+                        key={pkg.id || pkg.slug}
+                        className={isVip ? "vip-row" : ""}
+                      >
+                        <td>{pkg.name}</td>
+                        <td>{pkg.duration}</td>
+                        <td className={`price-cell ${isVip ? "vip-price" : ""}`}>
+                          {hasForeignerPrice ? (
+                            <>
+                              ₦{Number(pkg.priceNGN).toLocaleString()} (Nigerian Resident) / ₦
+                              {Number(pkg.priceForeignerNGN).toLocaleString()} (International Visitor)
+                            </>
+                          ) : (
+                            <>₦{Number(pkg.priceNGN).toLocaleString()}</>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -377,13 +403,13 @@ export default function TermsAndConditionsPage() {
             </p>
 
             <p>
-              <strong>5.2 Early-Bird Offer:</strong> a 5% discount applies
+              <strong>5.2 Early-Bird Offer:</strong> a 2% discount applies
               to the first 20 seats booked using the voucher code shown on
               the website, valid until 15 November 2026 or until the 20
               seats are taken, whichever occurs first.
             </p>
             <p>
-              <strong>5.3 Group Discount:</strong> an automatic 5% discount
+              <strong>5.3 Group Discount:</strong> an automatic 2% discount
               applies when four (4) or more seats are booked in a single
               transaction.
             </p>
@@ -1200,7 +1226,7 @@ export default function TermsAndConditionsPage() {
         ),
       },
     ],
-    [],
+    [sortedPackages],
   );
 
   const filteredSections = useMemo(() => {
@@ -1322,7 +1348,7 @@ export default function TermsAndConditionsPage() {
                 cursor: "pointer",
                 borderRadius: "9999px",
               }}
-              title="Reserve seats for Detty December 2026"
+              title="Reserve seats for Lagos Luxe 2026"
             >
               <Sparkles size={15} className="btn-book-icon" />
               <span className="nav-btn-text-desktop">Book Excursion</span>
@@ -1339,12 +1365,12 @@ export default function TermsAndConditionsPage() {
       <section className="terms-hero">
         <div className="container hero-container">
           <div className="hero-content">
-            <h1 className="hero-title">Lag Luxe 2026: Terms and Conditions</h1>
+            <h1 className="hero-title">Lagos Luxe 2026: Terms and Conditions</h1>
 
             <p className="hero-lead">
               Official Programme Regulations governing all reservations, guest
               allocations, MOPOL security protocols, and operational policies
-              for the Detty December Lagos Luxe initiative co-hosted by{" "}
+              for the Lagos Luxe 2026 initiative co-hosted by{" "}
               <strong style={{ color: "#ffffff" }}>
                 Incel Holidays &amp; Tourism Ltd
               </strong>{" "}

@@ -275,7 +275,7 @@ function BookingLookupContent() {
     ? booking.paymentMethod === "whatsapp" && isPending
       ? `Hello Incel Holidays & Prospiz Team! I reserved a seat via WhatsApp and would like to complete my booking payment:%0A%0A*Reference:* ${booking.bookingRef}%0A*Status:* ${booking.paymentStatus.toUpperCase()}%0A%0APlease provide bank transfer details so I can complete my booking.`
       : `Hello Incel Holidays & Prospiz Team! I am inquiring about my booking:%0A%0A*Reference:* ${booking.bookingRef}%0A*Status:* ${booking.paymentStatus.toUpperCase()}`
-    : `Hello Incel Holidays & Prospiz Team! I need assistance looking up my reservation for Detty December Lagos Luxe.`;
+    : `Hello Incel Holidays & Prospiz Team! I need assistance looking up my reservation for Lagos Luxe 2026.`;
 
   return (
     <div
@@ -1306,10 +1306,10 @@ function BookingLookupContent() {
                             borderRadius: "4px",
                           }}
                         >
-                          5% OFF
+                          {booking.groupDiscountPct || 2}% OFF
                         </span>
                         <span>
-                          Group Discount ({booking.groupDiscountPct || 5}% for
+                          Group Discount ({booking.groupDiscountPct || 2}% for
                           4+ Guests):
                         </span>
                       </span>

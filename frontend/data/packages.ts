@@ -27,7 +27,7 @@ export const PACKAGES_DATA: ExcursionPackage[] = [
   {
     id: 'all-inclusive-vip',
     name: 'The Ultimate "Lagos Luxe" 7-Day All-Access Pass',
-    tagline: 'The complete Detty December experience — all 5 excursions, food, wellness & VIP nights',
+    tagline: 'The complete Lagos Luxe 2026 experience — all 5 excursions, food, wellness & VIP nights',
     category: 'bundle',
     priceNGN: 520000, // From Word doc & Strategy deck
     image: '/images/hero-lagos.jpg',
@@ -36,7 +36,7 @@ export const PACKAGES_DATA: ExcursionPackage[] = [
     location: 'Lagos & Historic Regional Excursions',
     maxSeats: 100,
     seatsBooked: 82,
-    highlightBadge: 'MOST POPULAR · 5% EARLY-BIRD',
+    highlightBadge: 'MOST POPULAR · 2% EARLY-BIRD',
     description:
       'Experience the pulse of Lagos without a single logistics headache. Includes all 5 premium excursions, reservations at the best tables (jollof, suya, amala feasts), spa & recovery yoga sessions, and priority VIP entry to December comedy specials and concert nights.',
     inclusions: [
@@ -227,15 +227,15 @@ export function formatPrice(
   }
 }
 
-// Early bird helper (5% off first 20 seats until Nov 15)
+// Early bird helper (2% off first 20 seats until Nov 15)
 export function calculateEarlyBirdDiscount(amountNGN: number): number {
-  return Math.round(amountNGN * 0.95);
+  return Math.round(amountNGN * 0.98);
 }
 
-// Group discount helper (5% off for 4+ guests as per Strategy slide 6)
+// Group discount helper (2% off for 4+ guests as per Strategy slide 6)
 export function calculateGroupDiscount(totalAmountNGN: number, guestCount: number): number {
   if (guestCount >= 4) {
-    return Math.round(totalAmountNGN * 0.05);
+    return Math.round(totalAmountNGN * 0.02);
   }
   return 0;
 }

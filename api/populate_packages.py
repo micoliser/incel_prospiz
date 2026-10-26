@@ -11,7 +11,7 @@ PACKAGES_DATA = [
     {
         "slug": "all-inclusive-vip",
         "name": 'The Ultimate "Lagos Luxe" 7-Day All-Access Pass',
-        "tagline": 'The complete Detty December experience — all 5 excursions, food, wellness & VIP nights',
+        "tagline": 'The complete Lagos Luxe 2026 experience — all 5 excursions, food, wellness & VIP nights',
         "category": "bundle",
         "price_ngn": 520000,
         "image": "/images/hero-lagos.jpg",
@@ -20,7 +20,7 @@ PACKAGES_DATA = [
         "location": "Lagos & Historic Regional Excursions",
         "max_seats": 100,
         "seats_booked": 82,
-        "highlight_badge": "MOST POPULAR · 5% EARLY-BIRD",
+        "highlight_badge": "MOST POPULAR · 2% EARLY-BIRD",
         "description": "Experience the pulse of Lagos without a single logistics headache. Includes all 5 premium excursions, reservations at the best tables (jollof, suya, amala feasts), spa & recovery yoga sessions, and priority VIP entry to December comedy specials and concert nights.",
         "inclusions": [
             "All 5 Excursions: Abeokuta, Badagry, Tarkwa Bay, Kalakuta, Lekki CC",
@@ -176,8 +176,10 @@ PACKAGES_DATA = [
 ]
 
 PROMO_CODES = [
-    {"code": "EARLYBIRD5", "discount_pct": 5},
-    {"code": "DETTY5", "discount_pct": 5},
+    {"code": "EARLYBIRD2", "discount_pct": 2},
+    {"code": "EARLYBIRD5", "discount_pct": 2},
+    {"code": "EARLYBIRD17", "discount_pct": 2},
+    {"code": "DETTY5", "discount_pct": 2},
     {"code": "VIPLAGOS", "discount_pct": 10},
 ]
 

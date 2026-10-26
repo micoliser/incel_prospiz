@@ -61,7 +61,7 @@ class Package(models.Model):
 class PromoCode(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     code = models.CharField(max_length=50, unique=True)
-    discount_pct = models.PositiveIntegerField(default=5)
+    discount_pct = models.PositiveIntegerField(default=2)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -72,7 +72,7 @@ class PromoCode(models.Model):
 class CampaignConfig(models.Model):
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     early_bird_code = models.CharField(max_length=50, default='EARLYBIRD5', help_text="Promo code used for early bird claims")
-    early_bird_discount_pct = models.PositiveIntegerField(default=5)
+    early_bird_discount_pct = models.PositiveIntegerField(default=2)
     early_bird_cap = models.PositiveIntegerField(default=20, help_text="Total allocation of early bird seats")
     early_bird_baseline_claimed = models.PositiveIntegerField(default=0, help_text="Starting baseline claimed count (0 by default to reflect real bookings)")
     early_bird_deadline = models.DateTimeField(help_text="Deadline for early bird discount")
@@ -109,7 +109,7 @@ class CampaignConfig(models.Model):
             default_gbp = getattr(settings, 'CAMPAIGN_DEFAULT_GBP_RATE', 2050.00)
             cfg = cls.objects.create(
                 early_bird_code='EARLYBIRD5',
-                early_bird_discount_pct=5,
+                early_bird_discount_pct=2,
                 early_bird_cap=20,
                 early_bird_baseline_claimed=default_baseline,
                 early_bird_deadline=deadline,
@@ -154,7 +154,7 @@ class Booking(models.Model):
     selected_packages = models.JSONField(help_text="List of package IDs/slugs selected")
     
     subtotal_ngn = models.PositiveIntegerField(default=0)
-    group_discount_pct = models.PositiveIntegerField(default=0, help_text="Group discount percentage (e.g. 5)")
+    group_discount_pct = models.PositiveIntegerField(default=0, help_text="Group discount percentage (e.g. 2)")
     group_discount_ngn = models.PositiveIntegerField(default=0)
     promo_code = models.CharField(max_length=50, blank=True, null=True)
     promo_discount_pct = models.PositiveIntegerField(default=0, help_text="Promo voucher discount percentage")

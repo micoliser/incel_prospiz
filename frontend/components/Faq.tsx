@@ -22,7 +22,7 @@ export const Faq: React.FC = () => {
     },
     {
       q: 'What is the group discount policy?',
-      a: 'As established in our operational strategy, groups of 4 to 9 guests automatically receive a 5% discount on their total booking. For large corporate retreats or groups of 10+, please contact our team directly on WhatsApp for a custom package quote.',
+      a: 'As established in our operational strategy, groups of 4 to 9 guests automatically receive a 2% discount on their total booking. For large corporate retreats or groups of 10+, please contact our team directly on WhatsApp for a custom package quote.',
     },
     {
       q: 'Can you assist with airport pickup and luxury lodging?',
@@ -30,7 +30,7 @@ export const Faq: React.FC = () => {
     },
     {
       q: 'When do ticket bookings close?',
-      a: 'The campaign closes strictly on 15 December 2026, or as soon as each 100-passenger package cap is reached. Early-bird pricing (5% off the first 20 seats) is valid until 15 November.',
+      a: 'The campaign closes strictly on 15 December 2026, or as soon as each 100-passenger package cap is reached. Early-bird pricing (2% off the first 20 seats) is valid until 15 November.',
     },
   ];
 
@@ -57,7 +57,7 @@ export const Faq: React.FC = () => {
               color: 'var(--text-secondary)',
               lineHeight: 1.6,
             }}>
-              Everything you need to know about safety, logistics, payments, and booking your Detty December experience.
+              Everything you need to know about safety, logistics, payments, and booking your Lagos Luxe 2026 experience.
             </p>
           </div>
         </ScrollReveal>

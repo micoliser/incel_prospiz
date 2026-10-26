@@ -34,7 +34,7 @@ export const Hero: React.FC<HeroProps> = ({ currentCurrency, onOpenBooking, pack
   const bundlePrice = packages?.find((p) => p.id === 'all-inclusive-vip')?.priceNGN ?? 520000;
 
   const earlyBirdCode = stats?.earlyBird?.code || 'EARLYBIRD17';
-  const discountPct = stats?.earlyBird?.discountPct ?? 5;
+  const discountPct = stats?.earlyBird?.discountPct ?? 2;
   const remainingSeats = stats?.earlyBird?.remaining ?? 10;
 
   const handleCopy = () => {
@@ -286,7 +286,7 @@ export const Hero: React.FC<HeroProps> = ({ currentCurrency, onOpenBooking, pack
                 <span style={{ color: 'rgba(255,255,255,0.4)' }} className="hide-mobile">|</span>
                 <span style={{ color: stats?.earlyBird?.isActive !== false ? '#6ee7b7' : '#fca5a5', fontSize: '0.84rem', fontWeight: 800 }}>
                   {stats?.earlyBird?.isActive !== false
-                    ? `⚡ ${stats?.earlyBird?.discountPct ?? 5}% Early-Bird Active`
+                    ? `⚡ ${stats?.earlyBird?.discountPct ?? 2}% Early-Bird Active`
                     : '⚡ Official Capacity Active'}
                 </span>
               </div>
@@ -310,7 +310,7 @@ export const Hero: React.FC<HeroProps> = ({ currentCurrency, onOpenBooking, pack
                 </button>
 
                 <a
-                  href="https://wa.me/2348123456789?text=Hello%20Incel%20%26%20Prospiz%20Team!%20I%20am%20interested%20in%20the%20Detty%20December%20Lagos%20Luxe%202026%20package."
+                  href="https://wa.me/2348123456789?text=Hello%20Incel%20%26%20Prospiz%20Team!%20I%20am%20interested%20in%20the%20Lagos%20Luxe%202026%20package."
                   target="_blank"
                   rel="noopener noreferrer"
                   className="btn-whatsapp"
@@ -391,7 +391,7 @@ export const Hero: React.FC<HeroProps> = ({ currentCurrency, onOpenBooking, pack
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
                     }}>
-                      5% OFF
+                      2% OFF
                     </div>
                     <div style={{ fontSize: '0.8rem', color: '#cbd5e1', fontWeight: 600, marginTop: '4px' }}>
                       Automatic Squad Discount
@@ -422,7 +422,7 @@ export const Hero: React.FC<HeroProps> = ({ currentCurrency, onOpenBooking, pack
                       </span>
                     </div>
                     <span style={{ display: 'block', fontSize: '0.73rem', color: '#cbd5e1', lineHeight: 1.4 }}>
-                      Automatic 5% discount applied at checkout whenever you book 4 or more seats.
+                      Automatic 2% discount applied at checkout whenever you book 4 or more seats.
                     </span>
                   </div>
 

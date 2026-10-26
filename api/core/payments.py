@@ -162,7 +162,7 @@ def initialize_flutterwave_payment(booking: Booking, redirect_url: str = None) -
             "name": booking.full_name,
         },
         "customizations": {
-            "title": "Detty December Lagos Luxe",
+            "title": "Lagos Luxe 2026",
             "description": f"Official Experience Reservation ({booking.booking_ref})",
         },
         "meta": {

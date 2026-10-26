@@ -128,7 +128,7 @@ export const LeadCapture: React.FC<LeadCaptureProps> = ({ earlyBirdCode = 'EARLY
               margin: '0 auto 28px',
             }}>
               Not ready to book your package just yet? Join the private first-access list to lock in your
-              <strong style={{ color: 'var(--blue-deep)' }}> 5% early-bird discount</strong> before November 15.
+              <strong style={{ color: 'var(--blue-deep)' }}> 2% early-bird discount</strong> before November 15.
             </p>
 
             {submitted ? (
@@ -145,7 +145,7 @@ export const LeadCapture: React.FC<LeadCaptureProps> = ({ earlyBirdCode = 'EARLY
                 fontWeight: 700,
               }}>
                 <CheckCircle2 size={22} style={{ color: '#059669' }} />
-                <span>You’re on the list! Check your inbox for your 5% discount code: <strong>{earlyBirdCode}</strong></span>
+                <span>You’re on the list! Check your inbox for your 2% discount code: <strong>{earlyBirdCode}</strong></span>
               </div>
             ) : (
               <form noValidate onSubmit={handleSubmit} style={{
@@ -201,7 +201,7 @@ export const LeadCapture: React.FC<LeadCaptureProps> = ({ earlyBirdCode = 'EARLY
                   className="btn-primary"
                   style={{ padding: '15px 28px', fontSize: '1rem', width: '100%' }}
                 >
-                  <span>Claim 5% Off & First Access</span>
+                  <span>Claim 2% Off & First Access</span>
                   <ArrowRight size={18} />
                 </button>
 

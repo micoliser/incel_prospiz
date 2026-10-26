@@ -268,7 +268,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
           {/* WhatsApp Direct Support Link */}
           <a
-            href="https://wa.me/2348123456789?text=Hello%20Incel%20%26%20Prospiz%20Team!%20I%20am%20interested%20in%20the%20Detty%20December%20Lagos%20Luxe%202026%20package."
+            href="https://wa.me/2348123456789?text=Hello%20Incel%20%26%20Prospiz%20Team!%20I%20am%20interested%20in%20the%20Lagos%20Luxe%202026%20package."
             target="_blank"
             rel="noopener noreferrer"
             className="btn-whatsapp nav-whatsapp-btn"
@@ -429,7 +429,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             paddingTop: '6px',
           }}>
             <a
-              href="https://wa.me/2348123456789?text=Hello%20Incel%20%26%20Prospiz%20Team!%20I%20am%20interested%20in%20the%20Detty%20December%20Lagos%20Luxe%202026%20package."
+              href="https://wa.me/2348123456789?text=Hello%20Incel%20%26%20Prospiz%20Team!%20I%20am%20interested%20in%20the%20Lagos%20Luxe%202026%20package."
               target="_blank"
               rel="noopener noreferrer"
               className="btn-whatsapp"

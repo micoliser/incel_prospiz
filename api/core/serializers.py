@@ -164,8 +164,8 @@ class BookingCreateSerializer(serializers.ModelSerializer):
                 unit_price = pkg.price_foreigner_ngn
             subtotal += unit_price * guest_count
 
-        # Group discount: 5% for 4 or more guests
-        group_discount_pct = 5 if guest_count >= 4 else 0
+        # Group discount: 2% for 4 or more guests
+        group_discount_pct = 2 if guest_count >= 4 else 0
         group_discount = round(subtotal * (group_discount_pct / 100)) if group_discount_pct > 0 else 0
 
         # Promo discount

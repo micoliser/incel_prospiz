@@ -15,7 +15,7 @@ export const EarlyBirdModal: React.FC<EarlyBirdModalProps> = ({ stats, onClaim }
 
   // Dynamic values directly from backend CampaignStats
   const earlyBirdCode = stats?.earlyBird?.code || 'EARLYBIRD5';
-  const discountPct = stats?.earlyBird?.discountPct ?? 5;
+  const discountPct = stats?.earlyBird?.discountPct ?? 2;
   const remainingSeats = stats?.earlyBird?.remaining ?? 10;
   const totalCap = stats?.earlyBird?.totalCap ?? 20;
 
@@ -130,7 +130,7 @@ export const EarlyBirdModal: React.FC<EarlyBirdModalProps> = ({ stats, onClaim }
                 <Users size={16} className="eb-perk-icon green" />
                 <div className="eb-perk-body">
                   <strong className="eb-perk-title">Stackable with Groups</strong>
-                  <span className="eb-perk-sub">Save an extra 5% for parties of 4+</span>
+                  <span className="eb-perk-sub">Save an extra 2% for parties of 4+</span>
                 </div>
               </div>
 

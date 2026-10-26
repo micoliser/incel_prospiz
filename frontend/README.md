@@ -94,7 +94,7 @@ The frontend follows an **Impeccable** editorial luxury travel aesthetic (remini
 
 ### 3. Smart Booking Modal & Multi-Guest Cart
 - Real-time guest party size adjustments (`1` to `20+` passengers).
-- **Automatic Group Discounts**: Automatically applies a **5% group discount** for bookings with 4 or more guests.
+- **Automatic Group Discounts**: Automatically applies a **2% group discount** for bookings with 4 or more guests.
 - **Promotional Code Redemption**: Instant validation for campaign codes (`EARLYBIRD5`, `DETTY5`, `VIPLAGOS`) with immediate breakdown of original subtotal, discount, and final payable amount.
 - **Dual Payment Selector**: Guests choose between **Paystack** (Instant Card, Bank Transfer, USSD) and **Flutterwave** (Global Cards, International, Mobile Money).
 

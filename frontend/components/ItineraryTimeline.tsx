@@ -108,7 +108,7 @@ export const ItineraryTimeline: React.FC<{ onBookNow: () => void }> = ({ onBookN
     },
     {
       day: 7,
-      title: 'Detty December VIP Night & Concert Finale',
+      title: 'Lagos Luxe 2026 VIP Night & Concert Finale',
       time: 'Night (9:00 PM – Late)',
       location: 'Victoria Island Nightlife Hub',
       image: '/images/lagos-nightlife.jpg',

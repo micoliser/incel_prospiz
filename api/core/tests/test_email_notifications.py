@@ -93,7 +93,7 @@ class EmailNotificationTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
 
         email = mail.outbox[0]
-        self.assertIn("Booking Confirmed: Detty December Lagos Luxe", email.subject)
+        self.assertIn("Booking Confirmed: Lagos Luxe 2026", email.subject)
         self.assertIn(self.booking.booking_ref, email.subject)
         self.assertEqual(email.to, ['samuel@example.com'])
         self.assertIn('Incel Holidays and Tourism <info@inceltourism.com>', email.from_email)

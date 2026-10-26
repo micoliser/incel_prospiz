@@ -42,7 +42,7 @@ def build_booking_email_context(booking: Booking) -> Dict[str, Any]:
     if clean_phone.startswith('0'):
         clean_phone = '234' + clean_phone[1:]
     clean_phone = clean_phone.lstrip('+')
-    whatsapp_url = f"https://wa.me/{clean_phone}?text=Hello,%20this%20is%20the%20Incel%20Holidays%20team%20regarding%20your%20Detty%20December%20Lagos%20Luxe%20booking%20{booking.booking_ref}."
+    whatsapp_url = f"https://wa.me/{clean_phone}?text=Hello,%20this%20is%20the%20Incel%20Holidays%20team%20regarding%20your%20Lagos%20Luxe%202026%20booking%20{booking.booking_ref}."
 
     # Format payment method label
     method_raw = (booking.payment_method or '').lower()
@@ -135,7 +135,7 @@ def send_customer_booking_confirmation(booking: Booking, is_async: bool = True) 
     """
     try:
         context = build_booking_email_context(booking)
-        subject = f"Booking Confirmed: Detty December Lagos Luxe [Ref: {booking.booking_ref}]"
+        subject = f"Booking Confirmed: Lagos Luxe 2026 [Ref: {booking.booking_ref}]"
         recipients = [booking.email]
         reply_to = EmailConfig.get_default_from_email()
 
