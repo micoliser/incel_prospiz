@@ -338,6 +338,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isOpen]);
 
+  // Lock background body scroll while the booking modal is open
+  useEffect(() => {
+    if (isOpen) {
+      const originalStyle = window.getComputedStyle(document.body).overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalStyle;
+      };
+    }
+  }, [isOpen]);
+
   // Turnstile CAPTCHA Mount & Lifecycle
   const siteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY || '1x00000000000000000000AA';
   useEffect(() => {
@@ -611,13 +622,15 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       style={{
         position: 'fixed',
         inset: 0,
-        zIndex: 999,
-        backgroundColor: 'rgba(9, 30, 66, 0.7)',
+        zIndex: 100000,
+        backgroundColor: 'rgba(9, 30, 66, 0.72)',
         backdropFilter: 'blur(10px)',
+        WebkitBackdropFilter: 'blur(10px)',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         padding: '16px',
+        overflowY: 'auto',
       }}
     >
       <div
@@ -640,41 +653,48 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         <div className="mobile-drag-handle" style={{ display: 'none', width: '42px', height: '4px', borderRadius: '2px', backgroundColor: '#cbd5e1', margin: '10px auto 0' }} />
 
         {/* Modal Header */}
-        <div style={{
-          padding: '20px 24px',
-          borderBottom: '1px solid var(--border-light)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          position: 'sticky',
-          top: 0,
-          backgroundColor: '#ffffff',
-          zIndex: 10,
-        }}>
-          <div>
+        <div
+          className="booking-modal-header"
+          style={{
+            padding: '18px 24px',
+            borderBottom: '1px solid var(--border-light)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            position: 'sticky',
+            top: 0,
+            backgroundColor: '#ffffff',
+            zIndex: 10,
+          }}
+        >
+          <div style={{ flex: '1 1 auto', paddingRight: '12px' }}>
             <div style={{ fontSize: '0.78rem', fontWeight: 800, color: 'var(--blue-deep)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
               Incel Holidays × Prospiz Experience
             </div>
-            <h3 style={{ fontSize: '1.35rem', color: 'var(--text-heading)', marginTop: '2px' }}>
+            <h3 style={{ fontSize: '1.3rem', color: 'var(--text-heading)', marginTop: '2px', lineHeight: 1.25 }}>
               {step === 'details' ? 'Reserve Your Lagos Luxe 2026 Seats' : 'Booking Confirmation'}
             </h3>
           </div>
 
           <button
+            type="button"
             onClick={handleClose}
             aria-label="Close booking modal"
+            title="Close modal (Esc)"
+            className="booking-modal-close-btn"
             style={{
-              background: 'var(--bg-subtle)',
-              border: '1px solid var(--border-light)',
+              background: '#f1f5f9',
+              border: '1.5px solid #cbd5e1',
               borderRadius: '50%',
               width: '42px',
               height: '42px',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: 'var(--text-heading)',
+              color: '#334155',
               cursor: 'pointer',
               flexShrink: 0,
+              transition: 'all 0.2s ease',
             }}
           >
             <X size={20} />
@@ -1750,7 +1770,33 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 )}
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+              <div className="checkout-btn-group" style={{ display: 'flex', alignItems: 'center', gap: '10px', flexShrink: 0 }}>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="btn-modal-cancel"
+                  style={{
+                    padding: '14px 22px',
+                    fontSize: '0.94rem',
+                    fontWeight: 700,
+                    borderRadius: 'var(--radius-full)',
+                    background: '#f1f5f9',
+                    border: '1.5px solid #cbd5e1',
+                    color: '#475569',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '6px',
+                    whiteSpace: 'nowrap',
+                  }}
+                  title="Cancel booking and return to site"
+                >
+                  <X size={16} />
+                  <span>Cancel</span>
+                </button>
+
                 <button
                   type="submit"
                   disabled={isSubmitting || !agreeTerms || !agreeDataProcessing}
@@ -1976,6 +2022,17 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       </div>
 
       <style jsx>{`
+        .booking-modal-close-btn:hover {
+          background-color: #e2e8f0 !important;
+          border-color: #94a3b8 !important;
+          color: #0f172a !important;
+          transform: scale(1.05);
+        }
+        .btn-modal-cancel:hover {
+          background-color: #e2e8f0 !important;
+          border-color: #94a3b8 !important;
+          color: #0f172a !important;
+        }
         @media (max-width: 640px) {
           .booking-modal-overlay {
             align-items: flex-end !important;
@@ -1987,15 +2044,28 @@ export const BookingModal: React.FC<BookingModalProps> = ({
             border-bottom-right-radius: 0 !important;
             border-bottom: none !important;
           }
+          .booking-modal-header {
+            padding: 14px 16px !important;
+          }
+          .booking-modal-header h3 {
+            font-size: 1.15rem !important;
+          }
           .mobile-drag-handle {
             display: block !important;
           }
           .checkout-action-bar {
             flex-direction: column !important;
             align-items: stretch !important;
-            gap: 14px !important;
+            gap: 12px !important;
+            padding: 14px 16px !important;
           }
-          .checkout-action-bar button {
+          .checkout-btn-group {
+            display: flex !important;
+            flex-direction: column-reverse !important;
+            width: 100% !important;
+            gap: 8px !important;
+          }
+          .checkout-btn-group button {
             width: 100% !important;
             justify-content: center !important;
           }
