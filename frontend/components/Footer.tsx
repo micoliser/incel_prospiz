@@ -74,32 +74,32 @@ export const Footer: React.FC = () => {
             <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px', fontSize: '0.88rem' }}>
               <li>
                 <a href="#packages" className="footer-link" style={{ color: '#cbd5e1', transition: 'color 0.2s' }}>
-                  Abeokuta Heritage & Olumo Rock (₦75k)
+                  Abeokuta Heritage & Olumo Rock
                 </a>
               </li>
               <li>
                 <a href="#packages" className="footer-link" style={{ color: '#cbd5e1', transition: 'color 0.2s' }}>
-                  Badagry Slave Route Expedition (₦70k/₦90k)
+                  Badagry Slave Route Expedition
                 </a>
               </li>
               <li>
                 <a href="#packages" className="footer-link" style={{ color: '#cbd5e1', transition: 'color 0.2s' }}>
-                  Tarkwa Bay Beach Day & Boat Cruise (₦75k)
+                  Tarkwa Bay Beach Day & Boat Cruise
                 </a>
               </li>
               <li>
                 <a href="#packages" className="footer-link" style={{ color: '#cbd5e1', transition: 'color 0.2s' }}>
-                  Kalakuta Afrobeat Museum & Fela Shrine (₦85k)
+                  Kalakuta Afrobeat Museum & Fela Shrine
                 </a>
               </li>
               <li>
                 <a href="#packages" className="footer-link" style={{ color: '#cbd5e1', transition: 'color 0.2s' }}>
-                  Lekki Conservation Centre Canopy Walk (₦75k)
+                  Lekki Conservation Centre Canopy Walk
                 </a>
               </li>
               <li>
                 <a href="#packages" className="footer-link" style={{ color: '#38bdf8', fontWeight: 700 }}>
-                  7-Day All-Access Lagos Luxe VIP Pass (₦520k)
+                  7-Day All-Access Lagos Luxe VIP Pass
                 </a>
               </li>
             </ul>
