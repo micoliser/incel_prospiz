@@ -340,7 +340,7 @@ class BookingDetailView(generics.RetrieveAPIView):
             # If payment_url is empty for online gateway, automatically generate a fresh checkout URL
             method = booking.payment_method
             if method == 'card':
-                method = 'flutterwave' if booking.currency in ['USD', 'GBP'] else 'paystack'
+                method = 'paystack'
             if method in ['paystack', 'flutterwave'] and not booking.payment_url:
                 try:
                     if method == 'paystack':
@@ -387,7 +387,7 @@ class BookingPayView(APIView):
         # Generate fresh checkout URL for the booking's own payment method
         method = booking.payment_method
         if method == 'card':
-            method = 'flutterwave' if booking.currency in ['USD', 'GBP'] else 'paystack'
+            method = 'paystack'
 
         if method == 'paystack':
             res = initialize_paystack_payment(booking, callback_url=callback_url)

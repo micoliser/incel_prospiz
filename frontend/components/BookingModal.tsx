@@ -76,9 +76,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   const [phone, setPhone] = useState<string>('');
   const [country, setCountry] = useState<string>('UK');
   const [specialRequests, setSpecialRequests] = useState<string>('');
-  const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'flutterwave' | 'whatsapp'>(
-    currentCurrency === 'NGN' ? 'paystack' : 'flutterwave'
-  );
+  const [paymentMethod, setPaymentMethod] = useState<'paystack' | 'flutterwave' | 'whatsapp'>('paystack');
 
   // Legal Agreement & Data Processing Consents
   const [agreeTerms, setAgreeTerms] = useState<boolean>(false);
@@ -247,12 +245,12 @@ export const BookingModal: React.FC<BookingModalProps> = ({
   // Track if modal selection has been initialized on open to prevent periodic background polling from reverting user choices
   const isInitializedRef = React.useRef(false);
 
-  // Ensure that if currency is USD or GBP, payment method automatically switches from paystack to flutterwave
+  // Ensure Flutterwave cannot be chosen while disabled
   useEffect(() => {
-    if (currentCurrency !== 'NGN' && paymentMethod === 'paystack') {
-      setPaymentMethod('flutterwave');
+    if (paymentMethod === 'flutterwave') {
+      setPaymentMethod('paystack');
     }
-  }, [currentCurrency, paymentMethod]);
+  }, [paymentMethod]);
 
   // Clear all form state whenever modal closes, or initialize selection when opened
   useEffect(() => {
@@ -264,7 +262,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
       setPhone('');
       setCountry('UK');
       setSpecialRequests('');
-      setPaymentMethod(currentCurrency === 'NGN' ? 'paystack' : 'flutterwave');
+      setPaymentMethod('paystack');
       setPromoCode('');
       setAppliedPromo(null);
       setPromoError('');
@@ -307,7 +305,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
     setPhone('');
     setCountry('UK');
     setSpecialRequests('');
-    setPaymentMethod(currentCurrency === 'NGN' ? 'paystack' : 'flutterwave');
+    setPaymentMethod('paystack');
     setPromoCode('');
     setAppliedPromo(null);
     setPromoError('');
@@ -566,8 +564,8 @@ export const BookingModal: React.FC<BookingModalProps> = ({
         onBookingSuccess();
       }
 
-      // If gateway returned a hosted checkout redirect URL (Paystack or Flutterwave), redirect immediately!
-      if (paymentMethod === 'paystack' || paymentMethod === 'flutterwave') {
+      // If gateway returned a hosted checkout redirect URL (Paystack), redirect immediately!
+      if (paymentMethod === 'paystack') {
         if (res.checkoutUrl) {
           if (typeof window !== 'undefined') {
             try {
@@ -1327,53 +1325,19 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     3. Choose Payment Method
                   </label>
                   <span style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', fontWeight: 600 }}>
-                    {currentCurrency === 'NGN' ? 'Select Paystack or Flutterwave' : 'International Checkout via Flutterwave'}
+                    Select Paystack or WhatsApp
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: currentCurrency === 'NGN' ? 'repeat(auto-fit, minmax(160px, 1fr))' : 'repeat(auto-fit, minmax(220px, 1fr))', gap: '12px', alignItems: 'stretch' }}>
-                  {/* Paystack: Shown only when currency is NGN */}
-                  {currentCurrency === 'NGN' && (
-                    <div
-                      onClick={() => setPaymentMethod('paystack')}
-                      style={{
-                        padding: '16px 14px',
-                        borderRadius: 'var(--radius-md)',
-                        border: paymentMethod === 'paystack' ? '2px solid var(--blue-deep)' : '1px solid var(--border-light)',
-                        backgroundColor: paymentMethod === 'paystack' ? 'var(--blue-surface)' : '#ffffff',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        height: '100%',
-                        justifyContent: 'space-between',
-                        gap: '6px',
-                        transition: 'all 0.2s ease',
-                        boxShadow: paymentMethod === 'paystack' ? '0 4px 12px rgba(13, 71, 161, 0.12)' : 'none',
-                      }}
-                    >
-                      <div>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                          <CreditCard size={22} style={{ color: 'var(--blue-deep)' }} />
-                          <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0d9488', backgroundColor: '#ccfbf1', padding: '2px 6px', borderRadius: '4px' }}>
-                            NGN
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-heading)' }}>Paystack</div>
-                      </div>
-                      <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
-                        Cards, Apple Pay, Bank Transfer & USSD
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Flutterwave: Shown for all currencies (NGN, USD, GBP) */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '12px', alignItems: 'stretch' }}>
+                  {/* Paystack: Active online option for all currencies */}
                   <div
-                    onClick={() => setPaymentMethod('flutterwave')}
+                    onClick={() => setPaymentMethod('paystack')}
                     style={{
                       padding: '16px 14px',
                       borderRadius: 'var(--radius-md)',
-                      border: paymentMethod === 'flutterwave' ? '2px solid var(--blue-deep)' : '1px solid var(--border-light)',
-                      backgroundColor: paymentMethod === 'flutterwave' ? 'var(--blue-surface)' : '#ffffff',
+                      border: paymentMethod === 'paystack' ? '2px solid var(--blue-deep)' : '1px solid var(--border-light)',
+                      backgroundColor: paymentMethod === 'paystack' ? 'var(--blue-surface)' : '#ffffff',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
@@ -1381,24 +1345,66 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       justifyContent: 'space-between',
                       gap: '6px',
                       transition: 'all 0.2s ease',
-                      boxShadow: paymentMethod === 'flutterwave' ? '0 4px 12px rgba(13, 71, 161, 0.12)' : 'none',
+                      boxShadow: paymentMethod === 'paystack' ? '0 4px 12px rgba(13, 71, 161, 0.12)' : 'none',
                     }}
                   >
                     <div>
                       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
-                        <CreditCard size={22} style={{ color: '#f59e0b' }} />
-                        <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#b45309', backgroundColor: '#fef3c7', padding: '2px 6px', borderRadius: '4px' }}>
-                          {currentCurrency === 'NGN' ? 'NGN' : `${currentCurrency} Global`}
+                        <CreditCard size={22} style={{ color: 'var(--blue-deep)' }} />
+                        <span style={{ fontSize: '0.68rem', fontWeight: 800, color: '#0d9488', backgroundColor: '#ccfbf1', padding: '2px 6px', borderRadius: '4px' }}>
+                          Instant Online
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-heading)' }}>
-                        {currentCurrency === 'NGN' ? 'Flutterwave' : `Flutterwave (${currentCurrency})`}
-                      </div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 800, color: 'var(--text-heading)' }}>Paystack</div>
                     </div>
                     <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
-                      {currentCurrency === 'NGN'
-                        ? 'Debit/Credit Card, Bank & Multi-Channel'
-                        : `International ${currentCurrency} Cards, Apple Pay, Google Pay`}
+                      Debit/Credit Cards (Local &amp; International), Apple Pay &amp; Bank Transfer
+                    </div>
+                  </div>
+
+                  {/* Flutterwave: Disabled with Coming Soon badge */}
+                  <div
+                    style={{
+                      padding: '16px 14px',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1.5px dashed #cbd5e1',
+                      backgroundColor: '#f8fafc',
+                      cursor: 'not-allowed',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      height: '100%',
+                      justifyContent: 'space-between',
+                      gap: '6px',
+                      opacity: 0.72,
+                      userSelect: 'none',
+                      position: 'relative',
+                    }}
+                    aria-disabled="true"
+                    title="Flutterwave payment option is coming soon. Please use Paystack or WhatsApp."
+                  >
+                    <div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '6px' }}>
+                        <CreditCard size={22} style={{ color: '#94a3b8' }} />
+                        <span style={{
+                          fontSize: '0.68rem',
+                          fontWeight: 800,
+                          color: '#475569',
+                          backgroundColor: '#e2e8f0',
+                          border: '1px solid #cbd5e1',
+                          padding: '2px 8px',
+                          borderRadius: '4px',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.04em',
+                        }}>
+                          Coming Soon
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#64748b' }}>
+                        Flutterwave
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: '#94a3b8', lineHeight: 1.35 }}>
+                      International Multi-Currency Gateway (Coming Soon)
                     </div>
                   </div>
 
@@ -1432,13 +1438,13 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                       </div>
                     </div>
                     <div style={{ fontSize: '0.74rem', color: 'var(--text-secondary)', lineHeight: 1.35 }}>
-                      Corporate bank wire & booking team assistance
+                      Corporate bank wire &amp; booking concierge assistance
                     </div>
                   </div>
                 </div>
 
                 {/* Gateway processing fee notice */}
-                {(paymentMethod === 'paystack' || paymentMethod === 'flutterwave') && (
+                {paymentMethod === 'paystack' && (
                   <div
                     style={{
                       marginTop: '16px',
@@ -1460,7 +1466,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                         Notice: Payment Gateway Processing Fee
                       </div>
                       <div style={{ fontSize: '0.82rem', color: '#78350f', lineHeight: 1.5 }}>
-                        {paymentMethod === 'paystack' ? 'Paystack' : 'Flutterwave'} charges a small standard card processing fee. This fee will be automatically added to your reservation total on the secure checkout page.
+                        Paystack charges a small standard card processing fee. This fee will be automatically added to your reservation total on the secure checkout page.
                       </div>
                     </div>
                   </div>
@@ -1747,7 +1753,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     )}
                   </div>
                 )}
-                {(paymentMethod === 'paystack' || paymentMethod === 'flutterwave') && (
+                {paymentMethod === 'paystack' && (
                   <div
                     style={{
                       fontSize: '0.72rem',
@@ -1820,14 +1826,10 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                     {isSubmitting
                       ? paymentMethod === 'paystack'
                         ? 'Redirecting to Paystack...'
-                        : paymentMethod === 'flutterwave'
-                          ? 'Redirecting to Flutterwave...'
-                          : 'Connecting to WhatsApp...'
+                        : 'Connecting to WhatsApp...'
                       : paymentMethod === 'paystack'
                         ? 'Pay with Paystack'
-                        : paymentMethod === 'flutterwave'
-                          ? 'Pay with Flutterwave'
-                          : 'Book via WhatsApp'}
+                        : 'Book via WhatsApp'}
                   </span>
                   <ArrowRight size={18} />
                 </button>
@@ -1957,9 +1959,7 @@ export const BookingModal: React.FC<BookingModalProps> = ({
                 <span style={{ fontWeight: 700, color: 'var(--text-heading)' }}>
                   {paymentMethod === 'paystack'
                     ? 'Paystack'
-                    : paymentMethod === 'flutterwave'
-                      ? 'Flutterwave'
-                      : 'Book via WhatsApp'}
+                    : 'Book via WhatsApp'}
                 </span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '0.9rem', alignItems: 'center' }}>
