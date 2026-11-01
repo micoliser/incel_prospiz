@@ -135,7 +135,7 @@ export const PendingCheckoutNotifier: React.FC = () => {
       style={{
         position: 'fixed',
         bottom: '24px',
-        right: '24px',
+        left: '24px',
         zIndex: 9998,
         maxWidth: '460px',
         width: 'calc(100% - 48px)',
